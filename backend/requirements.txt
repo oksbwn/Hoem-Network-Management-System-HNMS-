@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+
+duckdb
+pydantic-settings
+
+python-nmap
+
+# optional but recommended
+python-dotenv

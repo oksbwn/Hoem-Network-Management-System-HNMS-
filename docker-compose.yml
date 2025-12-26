@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  backend:
+    build: backend/
+    container_name: lan-scanner-backend
+    # For real LAN scans, host networking on Linux is usually needed
+    # comment this if you prefer normal bridge networking
+    network_mode: "host"
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "False"
+      DB_PATH: /data/network_scanner.duckdb
+      DB_SCHEMA_PATH: app/schema.sql
+      DB_INIT_MODE: create    # or recreate for dev reset
+    volumes:
+      - scanner-data:/data
+      - ./app/schema.sql:/app/app/schema.sql:ro
+      - ./app/.env:/app/.env:ro
+    restart: unless-stopped
+    # If you don't use host network, expose port instead:
+    # ports:
+    #   - "8000:8000"
+
+volumes:
+  scanner-data:

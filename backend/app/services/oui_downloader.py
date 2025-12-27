@@ -5,14 +5,14 @@ from app.core.db import get_connection
 
 logger = logging.getLogger(__name__)
 
-IEEE_OUI_URL = "http://standards-oui.ieee.org/oui/oui.txt"
+IEEE_OUI_URL = "https://standards-oui.ieee.org/oui/oui.txt"
 
 async def download_and_update_oui():
     """Downloads the IEEE OUI list and updates the mac_vendors table."""
     logger.info("Starting IEEE OUI database download...")
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(IEEE_OUI_URL, timeout=30.0)
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            resp = await client.get(IEEE_OUI_URL, timeout=60.0)
             if resp.status_code != 200:
                 logger.error(f"Failed to download OUI list: {resp.status_code}")
                 return

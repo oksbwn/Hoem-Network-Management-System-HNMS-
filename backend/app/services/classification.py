@@ -15,6 +15,13 @@ TYPE_TO_ICON = {
     "Access Point": "rss",
     "TV/Entertainment": "tv",
     "IoT Device": "cpu",
+    "Smart Bulb": "lightbulb",
+    "Smart Plug/Switch": "plug",
+    "Microcontroller": "microchip",
+    "Security Camera": "camera",
+    "Sensor": "waves",
+    "Audio/Speaker": "speaker",
+    "Streaming Device": "play",
     "Printer": "printer",
     "NAS/Storage": "hard-drive",
     "Game Console": "gamepad-2",
@@ -161,6 +168,29 @@ def classify_device(
     # 6. Servers
     if "server" in hostname or "proxmox" in hostname or "esxi" in hostname:
         return "Server", TYPE_TO_ICON["Server"]
+
+    # 7. Smart Home / IoT (The "Guessing" part)
+    iot_keywords = ["hue", "lifx", "light", "bulb", "led", "lamp"]
+    if any(k in hostname for k in iot_keywords) or any(k in vendor for k in iot_keywords):
+        return "Smart Bulb", TYPE_TO_ICON["Smart Bulb"]
+
+    if any(k in hostname for k in ["plug", "switch", "sonoff", "tuya", "shelly"]):
+        return "Smart Plug/Switch", TYPE_TO_ICON["Smart Plug/Switch"]
+    
+    if "camera" in hostname or any(k in vendor for k in ["dahua", "hikvision", "reolink", "wyze"]):
+        return "Security Camera", TYPE_TO_ICON["Security Camera"]
+    
+    if "sonos" in hostname or "sonos" in vendor:
+        return "Audio/Speaker", TYPE_TO_ICON["Audio/Speaker"]
+
+    if "roku" in hostname or "roku" in vendor:
+        return "Streaming Device", TYPE_TO_ICON["Streaming Device"]
+
+    # 8. Microcontrollers (ESP8266, ESP32, Arduino)
+    if "espressif" in vendor or "esp32" in hostname or "esp8266" in hostname or "nodemcu" in hostname:
+        return "Microcontroller", TYPE_TO_ICON["Microcontroller"]
+    if "arduino" in vendor or "arduino" in hostname:
+        return "Microcontroller", TYPE_TO_ICON["Microcontroller"]
 
     # Default based on ports
     if 80 in ports or 443 in ports:

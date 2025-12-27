@@ -106,7 +106,7 @@
             />
           </div>
           
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 gap-4">
             <div>
               <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Device Type</label>
               <select 
@@ -116,14 +116,22 @@
                 <option v-for="type in deviceTypes" :key="type" :value="type">{{ type }}</option>
               </select>
             </div>
+            
             <div>
-              <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Icon</label>
-              <select 
-                v-model="editForm.icon" 
-                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
-              >
-                <option v-for="(icon, key) in availableIcons" :key="key" :value="key">{{ key }}</option>
-              </select>
+              <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Select Icon</label>
+              <div class="grid grid-cols-7 gap-2 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+                <button 
+                  v-for="(iconComp, key) in availableIcons" 
+                  :key="key"
+                  @click="editForm.icon = key"
+                  type="button"
+                  class="p-2.5 flex items-center justify-center rounded-lg border-2 transition-all"
+                  :class="editForm.icon === key ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'border-transparent hover:bg-white dark:hover:bg-slate-800 text-slate-400'"
+                  :title="key"
+                >
+                  <component :is="iconComp" class="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -157,7 +165,8 @@ import axios from 'axios'
 import { 
   Smartphone, Tablet, Laptop, Monitor, Server, Router as RouterIcon, 
   Network, Layers, Rss, Tv, Cpu, Printer, HardDrive, Gamepad2, 
-  HelpCircle, Edit2, ExternalLink, X, RefreshCw, Loader2 
+  HelpCircle, Edit2, ExternalLink, X, RefreshCw, Loader2,
+  Lightbulb, Plug, Microchip, Camera, Waves, Speaker, Play
 } from 'lucide-vue-next'
 
 const devices = ref([])
@@ -177,8 +186,10 @@ const editForm = reactive({
 const deviceTypes = [
   'Smartphone', 'Tablet', 'Laptop', 'Desktop', 'Server', 
   'Router/Gateway', 'Network Bridge', 'Switch', 'Access Point', 
-  'TV/Entertainment', 'IoT Device', 'Printer', 'NAS/Storage', 
-  'Game Console', 'Generic', 'unknown'
+  'TV/Entertainment', 'Audio/Speaker', 'Streaming Device', 
+  'IoT Device', 'Smart Bulb', 'Smart Plug/Switch',
+  'Microcontroller', 'Security Camera', 'Sensor', 'Printer', 
+  'NAS/Storage', 'Game Console', 'Generic', 'unknown'
 ]
 
 const availableIcons = {
@@ -192,7 +203,14 @@ const availableIcons = {
   'layers': Layers,
   'rss': Rss,
   'tv': Tv,
+  'speaker': Speaker,
+  'play': Play,
   'cpu': Cpu,
+  'lightbulb': Lightbulb,
+  'plug': Plug,
+  'microchip': Microchip,
+  'camera': Camera,
+  'waves': Waves,
   'printer': Printer,
   'hard-drive': HardDrive,
   'gamepad-2': Gamepad2,

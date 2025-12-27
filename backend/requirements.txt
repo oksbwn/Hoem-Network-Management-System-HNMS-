@@ -1,5 +1,6 @@
 fastapi
-uvicorn[standard]
+
+uvicorn
 
 duckdb
 pydantic-settings
@@ -8,3 +9,4 @@ python-nmap
 
 # optional but recommended
 python-dotenv
+

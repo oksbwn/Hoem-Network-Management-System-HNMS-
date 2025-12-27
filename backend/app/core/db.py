@@ -15,9 +15,11 @@ def get_connection() -> duckdb.DuckDBPyConnection:
 
 def init_db() -> None:
     settings = get_settings()
+    print(f"Initializing database at {settings.db_path}...")
     conn = get_connection()
 
     if settings.db_init_mode == "recreate":
+        print("Recreating database tables...")
         conn.execute("""
             DROP TABLE IF EXISTS scan_schedules;
             DROP TABLE IF EXISTS device_ports;
@@ -27,5 +29,7 @@ def init_db() -> None:
             DROP TABLE IF EXISTS config;
         """)
 
+    print(f"Loading schema from {settings.db_schema_path}...")
     schema_sql = Path(settings.db_schema_path).read_text(encoding="utf-8")
     conn.execute(schema_sql)
+    print("Database initialized successfully.")

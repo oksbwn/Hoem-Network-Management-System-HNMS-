@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.core.db import get_connection
-from app.models.scans import ScanCreate, ScanRead, ScanRead, ScanResultRead
+from app.models.scans import ScanCreate, ScanRead, ScanResultRead
 from datetime import datetime
 import json, uuid
 

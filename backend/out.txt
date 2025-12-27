@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import duckdb; from pathlib import Path; db_path = Path('data/network_scanner.duckdb'); db_path.parent.mkdir(parents=True, exist_ok=True); conn = duckdb.connect(str(db_path)); print('Connected')
+                                                                                                                                                      ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+_duckdb.IOException: IO Error: Cannot open file "z:\netowrk_scanner\backend\data\network_scanner.duckdb": The process cannot access the file because it is being used by another process.
+
+File is already open in 
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.2544.0_x64__qbz5n2kfra8p0\python3.13.exe (PID 18600)

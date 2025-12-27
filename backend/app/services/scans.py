@@ -1,4 +1,5 @@
 import json
+import asyncio
 import nmap  # from python-nmap
 from uuid import uuid4
 from datetime import datetime, timezone
@@ -18,7 +19,8 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
     conn = get_connection()
     nm = nmap.PortScanner()
     args = _build_nmap_args(scan_type)
-    nm.scan(hosts=target, **args)  # runs nmap under the hood
+    # run blocking nmap scan in a thread
+    await asyncio.to_thread(nm.scan, hosts=target, **args)
 
     now = datetime.now(timezone.utc)
 

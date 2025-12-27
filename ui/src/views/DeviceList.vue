@@ -2,31 +2,54 @@
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Devices</h1>
-      <button 
-        @click="triggerScan" 
-        :disabled="isScanning"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-      >
-        <component :is="isScanning ? Loader2 : RefreshCw" class="h-4 w-4 mr-2" :class="{ 'animate-spin': isScanning }" />
-        {{ isScanning ? 'Scanning...' : 'Scan Now' }}
-      </button>
+      <div class="flex space-x-2">
+        <button @click="exportDevices"
+          class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition flex items-center">
+          <Download class="h-4 w-4 mr-2" />
+          Export
+        </button>
+        <button @click="$refs.importInput.click()"
+          class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition flex items-center">
+          <Upload class="h-4 w-4 mr-2" />
+          Import
+        </button>
+        <input type="file" ref="importInput" class="hidden" @change="handleImport" accept=".json" />
+        <button @click="triggerScan" :disabled="isScanning"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+          <component :is="isScanning ? Loader2 : RefreshCw" class="h-4 w-4 mr-2"
+            :class="{ 'animate-spin': isScanning }" />
+          {{ isScanning ? 'Scanning...' : 'Scan Now' }}
+        </button>
+      </div>
     </div>
 
     <!-- Error state -->
-    <div v-if="error" class="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-900/30">
+    <div v-if="error"
+      class="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-900/30">
       {{ error }}
     </div>
 
     <!-- Device Table -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+    <div
+      class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
       <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
         <thead class="bg-gray-50 dark:bg-slate-900">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Device</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendor</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Seen</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+            <th
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Device</th>
+            <th
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Vendor</th>
+            <th
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Type</th>
+            <th
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Last Seen</th>
+            <th
+              class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
@@ -35,15 +58,17 @@
               <div class="flex items-center space-x-3">
                 <div class="relative">
                   <div class="p-2 bg-gray-100 dark:bg-slate-700 rounded-lg">
-                    <component :is="getIcon(device.icon || 'help-circle')" class="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                    <component :is="getIcon(device.icon || 'help-circle')"
+                      class="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   </div>
-                  <span 
+                  <span
                     class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-slate-800"
-                    :class="isOnline(device) ? 'bg-green-500' : 'bg-gray-300'"
-                  ></span>
+                    :class="isOnline(device) ? 'bg-green-500' : 'bg-gray-300'"></span>
                 </div>
                 <div>
-                  <div class="text-sm font-bold text-gray-900 dark:text-white">{{ device.display_name || 'Unknown Device' }}</div>
+                  <div class="text-sm font-bold text-gray-900 dark:text-white">
+                    {{ device.display_name || 'Unknown Device' }}
+                  </div>
                   <div class="text-xs text-gray-500 font-mono">{{ device.ip }}</div>
                 </div>
               </div>
@@ -53,7 +78,8 @@
               <div class="text-xs text-gray-500 font-mono">{{ device.mac || 'No MAC' }}</div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+              <span
+                class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                 {{ device.device_type || 'unclassified' }}
               </span>
             </td>
@@ -61,18 +87,13 @@
               {{ formatTime(device.last_seen) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
-              <button 
-                @click="editDevice(device)" 
-                class="p-1.5 text-gray-400 hover:text-blue-600 transition dark:hover:text-blue-400"
-                title="Edit Device"
-              >
+              <button @click="editDevice(device)"
+                class="p-1.5 text-gray-400 hover:text-blue-600 transition dark:hover:text-blue-400" title="Edit Device">
                 <Edit2 class="h-4 w-4" />
               </button>
-              <router-link 
-                :to="'/devices/' + device.id" 
+              <router-link :to="'/devices/' + device.id"
                 class="p-1.5 text-gray-400 hover:text-gray-900 transition dark:hover:text-white inline-block"
-                title="View Details"
-              >
+                title="View Details">
                 <ExternalLink class="h-4 w-4" />
               </router-link>
             </td>
@@ -87,48 +108,45 @@
     </div>
 
     <!-- Edit Modal -->
-    <div v-if="editingDevice" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-700 overflow-hidden transform transition-all scale-100">
+    <div v-if="editingDevice"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div
+        class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-700 overflow-hidden transform transition-all scale-100">
         <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
           <h3 class="text-lg font-bold text-slate-800 dark:text-white">Edit Device</h3>
           <button @click="editingDevice = null" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
             <X class="h-5 w-5" />
           </button>
         </div>
-        
+
         <div class="p-6 space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Friendly Name</label>
-            <input 
-              v-model="editForm.display_name" 
+            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Friendly
+              Name</label>
+            <input v-model="editForm.display_name"
               class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
-              placeholder="e.g. My Phone"
-            />
+              placeholder="e.g. My Phone" />
           </div>
-          
+
           <div class="grid grid-cols-1 gap-4">
             <div>
-              <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Device Type</label>
-              <select 
-                v-model="editForm.device_type" 
-                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
-              >
+              <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Device
+                Type</label>
+              <select v-model="editForm.device_type"
+                class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white">
                 <option v-for="type in deviceTypes" :key="type" :value="type">{{ type }}</option>
               </select>
             </div>
-            
+
             <div>
-              <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Select Icon</label>
-              <div class="grid grid-cols-7 gap-2 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
-                <button 
-                  v-for="(iconComp, key) in availableIcons" 
-                  :key="key"
-                  @click="editForm.icon = key"
-                  type="button"
+              <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Select
+                Icon</label>
+              <div
+                class="grid grid-cols-7 gap-2 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+                <button v-for="(iconComp, key) in availableIcons" :key="key" @click="editForm.icon = key" type="button"
                   class="p-2.5 flex items-center justify-center rounded-lg border-2 transition-all"
                   :class="editForm.icon === key ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'border-transparent hover:bg-white dark:hover:bg-slate-800 text-slate-400'"
-                  :title="key"
-                >
+                  :title="key">
                   <component :is="iconComp" class="h-5 w-5" />
                 </button>
               </div>
@@ -137,20 +155,16 @@
 
           <div>
             <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Vendor</label>
-            <input 
-              v-model="editForm.vendor" 
-              class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
-            />
+            <input v-model="editForm.vendor"
+              class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" />
           </div>
         </div>
 
         <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end space-x-3">
-          <button @click="editingDevice = null" class="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
-          <button 
-            @click="saveDevice" 
-            :disabled="saving"
-            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold disabled:opacity-50"
-          >
+          <button @click="editingDevice = null"
+            class="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium">Cancel</button>
+          <button @click="saveDevice" :disabled="saving"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold disabled:opacity-50">
             {{ saving ? 'Saving...' : 'Save Changes' }}
           </button>
         </div>
@@ -162,11 +176,12 @@
 <script setup>
 import { ref, onMounted, onUnmounted, reactive } from 'vue'
 import axios from 'axios'
-import { 
-  Smartphone, Tablet, Laptop, Monitor, Server, Router as RouterIcon, 
-  Network, Layers, Rss, Tv, Cpu, Printer, HardDrive, Gamepad2, 
+import {
+  Smartphone, Tablet, Laptop, Monitor, Server, Router as RouterIcon,
+  Network, Layers, Rss, Tv, Cpu, Printer, HardDrive, Gamepad2,
   HelpCircle, Edit2, ExternalLink, X, RefreshCw, Loader2,
-  Lightbulb, Plug, Microchip, Camera, Waves, Speaker, Play
+  Lightbulb, Plug, Microchip, Camera, Waves, Speaker, Play,
+  Download, Upload
 } from 'lucide-vue-next'
 
 const devices = ref([])
@@ -174,6 +189,7 @@ const isScanning = ref(false)
 const loading = ref(true)
 const error = ref('')
 const saving = ref(false)
+const importInput = ref(null)
 
 const editingDevice = ref(null)
 const editForm = reactive({
@@ -183,12 +199,49 @@ const editForm = reactive({
   icon: ''
 })
 
+const exportDevices = async () => {
+  try {
+    const res = await axios.get('/api/v1/devices/export/json')
+    const dataStr = JSON.stringify(res.data, null, 2)
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr)
+    const fileName = `netowrk_scanner_export_${new Date().toISOString().slice(0, 10)}.json`
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', dataUri)
+    linkElement.setAttribute('download', fileName)
+    linkElement.click()
+  } catch (e) {
+    console.error('Export failed:', e)
+    alert('Failed to export devices')
+  }
+}
+
+const handleImport = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const devicesData = JSON.parse(e.target.result)
+      await axios.post('/api/v1/devices/import/json', devicesData)
+      alert('Import successful!')
+      fetchDevices()
+    } catch (err) {
+      console.error('Import failed:', err)
+      alert('Failed to import devices. Please ensure the file is valid JSON.')
+    } finally {
+      event.target.value = '' // Clear input
+    }
+  }
+  reader.readAsText(file)
+}
+
 const deviceTypes = [
-  'Smartphone', 'Tablet', 'Laptop', 'Desktop', 'Server', 
-  'Router/Gateway', 'Network Bridge', 'Switch', 'Access Point', 
-  'TV/Entertainment', 'Audio/Speaker', 'Streaming Device', 
+  'Smartphone', 'Tablet', 'Laptop', 'Desktop', 'Server',
+  'Router/Gateway', 'Network Bridge', 'Switch', 'Access Point',
+  'TV/Entertainment', 'Audio/Speaker', 'Streaming Device',
   'IoT Device', 'Smart Bulb', 'Smart Plug/Switch',
-  'Microcontroller', 'Security Camera', 'Sensor', 'Printer', 
+  'Microcontroller', 'Security Camera', 'Sensor', 'Printer',
   'NAS/Storage', 'Game Console', 'Generic', 'unknown'
 ]
 
@@ -257,23 +310,23 @@ const saveDevice = async () => {
 }
 
 const checkActiveScan = async () => {
-    try {
-        const res = await axios.get('/api/v1/scans/')
-        isScanning.value = res.data.some(s => s.status === 'queued' || s.status === 'running')
-    } catch (e) {
-        console.error('Failed to check active scans', e)
-    }
+  try {
+    const res = await axios.get('/api/v1/scans/')
+    isScanning.value = res.data.some(s => s.status === 'queued' || s.status === 'running')
+  } catch (e) {
+    console.error('Failed to check active scans', e)
+  }
 }
 
 const triggerScan = async () => {
-    isScanning.value = true
-    try {
-        await axios.post('/api/v1/scans/discovery')
-    } catch (error) {
-        console.error('Scan failed:', error)
-    } finally {
-        await checkActiveScan()
-    }
+  isScanning.value = true
+  try {
+    await axios.post('/api/v1/scans/discovery')
+  } catch (error) {
+    console.error('Scan failed:', error)
+  } finally {
+    await checkActiveScan()
+  }
 }
 
 const isOnline = (d) => {

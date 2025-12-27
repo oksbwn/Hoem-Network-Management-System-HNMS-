@@ -38,3 +38,4 @@ app.include_router(config_router, prefix="/api/v1/config", tags=["config"])
 app.include_router(scans_router, prefix="/api/v1/scans", tags=["scans"])
 app.include_router(devices_router, prefix="/api/v1/devices", tags=["devices"])
 app.include_router(schedules_router, prefix="/api/v1/schedules", tags=["schedules"])
+# Force Reload

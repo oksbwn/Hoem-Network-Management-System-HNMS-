@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Query, HTTPException
+from typing import List, Annotated
 from app.core.db import get_connection
 from app.models.devices import DeviceRead
 
 router = APIRouter()
 
-@router.get("/", response_model=list[DeviceRead])
-def list_devices(
-    device_type: str | None = Query(default=None),
-    online_only: bool = Query(default=False),
-):
+def _internal_list_devices(device_type: str | None = None, online_only: bool = False):
     conn = get_connection()
     try:
         base_sql = """
@@ -27,6 +24,9 @@ def list_devices(
             base_sql += " WHERE " + " AND ".join(clauses)
         base_sql += " ORDER BY ip"
     
+        print(f"DEBUG: _internal_list_devices called with device_type={device_type} (type={type(device_type)})")
+        print(f"DEBUG: params={params}")
+        
         rows = conn.execute(base_sql, params).fetchall()
         return [
             DeviceRead(
@@ -46,6 +46,13 @@ def list_devices(
         ]
     finally:
         conn.close()
+
+@router.get("/", response_model=list[DeviceRead])
+def list_devices(
+    device_type: Annotated[str | None, Query()] = None,
+    online_only: Annotated[bool, Query()] = False,
+):
+    return _internal_list_devices(device_type=device_type, online_only=online_only)
 
 @router.get("/{device_id}", response_model=DeviceRead)
 def get_device(device_id: str):
@@ -123,5 +130,37 @@ def update_device(device_id: str, payload: DeviceUpdate):
         conn.execute(sql, params)
         
         return get_device(device_id)
+    finally:
+        conn.close()
+
+@router.get("/export/json")
+def export_devices():
+    """Returns all devices for backup purposes."""
+    return _internal_list_devices()
+
+from app.models.devices import DeviceRead
+
+@router.post("/import/json")
+def import_devices(devices_data: List[DeviceRead]):
+    """Imports/Restores devices from a list. Uses INSERT OR REPLACE."""
+    conn = get_connection()
+    try:
+        count = 0
+        for d in devices_data:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO devices 
+                (id, ip, mac, name, display_name, device_type, first_seen, last_seen, vendor, icon, attributes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    d.id, d.ip, d.mac, d.name, d.display_name, d.device_type,
+                    d.first_seen, d.last_seen, d.vendor, d.icon, d.attributes
+                ]
+            )
+            count += 1
+        return {"status": "success", "imported": count}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to import: {str(e)}")
     finally:
         conn.close()

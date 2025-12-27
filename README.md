@@ -1,15 +1,48 @@
-## Backend
+# Home Network Management System (HNMS)
 
-### Test locally
+A web-based home network management system for scanning devices, tracking history, and managing network configuration.
 
-> TO install Python
-sudo apt install python3-full python3-venv -y
+## Tech Stack
+- **Backend:** FastAPI, DuckDB
+- **Frontend:** Vue 3, Vite, Tailwind CSS
 
-> To set up virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
+---
+
+## Backend Setup
+
+### 1. Install Dependencies
+Ensure you have Python installed. Run the following in the `backend` directory:
+```bash
 pip install -r requirements.txt
+```
 
-> To run the app
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+### 2. Run the App
+Start the FastAPI server:
+```bash
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+```
+The backend will be available at [http://localhost:8001](http://localhost:8001).
+
+---
+
+## Frontend Setup
+
+### 1. Install Dependencies
+Ensure you have Node.js installed. Run the following in the `ui` directory:
+```bash
+npm install
+```
+
+### 2. Run the App
+Start the Vite development server:
+```bash
+npm run dev
+```
+The frontend will be available at [http://localhost:5173](http://localhost:5173).
+
+---
+
+## Project Structure
+- `/backend`: FastAPI application and DuckDB database.
+- `/ui`: Vue 3 frontend application.
+- `/data`: Database storage location.

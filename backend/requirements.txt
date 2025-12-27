@@ -9,4 +9,6 @@ python-nmap
 
 # optional but recommended
 python-dotenv
+paho-mqtt
+httpx
 

@@ -67,26 +67,5 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
         )
 
         # upsert device
-        row = conn.execute(
-            "SELECT id, first_seen FROM devices WHERE ip = ?", [ip]
-        ).fetchone()
-        if row:
-            device_id, first_seen = row
-            conn.execute(
-                """
-                UPDATE devices
-                SET mac = COALESCE(?, mac),
-                    last_seen = ?
-                WHERE id = ?
-                """,
-                [mac, now, device_id],
-            )
-        else:
-            device_id = str(uuid4())
-            conn.execute(
-                """
-                INSERT INTO devices (id, ip, mac, first_seen, last_seen)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                [device_id, ip, mac, now, now],
-            )
+        from app.services.devices import upsert_device_from_scan
+        await upsert_device_from_scan(ip, mac, hostname, ports_list)

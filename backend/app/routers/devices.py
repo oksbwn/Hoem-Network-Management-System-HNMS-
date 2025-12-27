@@ -68,3 +68,41 @@ def get_device(device_id: str):
         first_seen=row[6],
         last_seen=row[7],
     )
+
+from app.models.devices import DeviceUpdate
+
+@router.put("/{device_id}", response_model=DeviceRead)
+def update_device(device_id: str, payload: DeviceUpdate):
+    conn = get_connection()
+    
+    # Verify existence
+    row = conn.execute("SELECT id FROM devices WHERE id = ?", [device_id]).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Device not found")
+        
+    # Construct update query dynamically
+    updates = []
+    params = []
+    
+    if payload.name is not None:
+        updates.append("name = ?")
+        params.append(payload.name)
+        
+    if payload.display_name is not None:
+        updates.append("display_name = ?")
+        params.append(payload.display_name)
+        
+    if payload.device_type is not None:
+        updates.append("device_type = ?")
+        params.append(payload.device_type)
+        
+    if not updates:
+        # no-op
+        return get_device(device_id)
+        
+    sql = f"UPDATE devices SET {', '.join(updates)} WHERE id = ?"
+    params.append(device_id)
+    
+    conn.execute(sql, params)
+    
+    return get_device(device_id)

@@ -32,3 +32,22 @@ def upsert_config_item(key: str, payload: ConfigUpdate):
         [key, payload.value],
     )
     return ConfigItem(key=key, value=payload.value)
+
+@router.post("/", response_model=list[ConfigItem])
+def bulk_update_config(payload: dict[str, str]):
+    conn = get_connection()
+    results = []
+    
+    # We use a transaction effectively by being in one request context (DuckDB handling)
+    for key, value in payload.items():
+        conn.execute(
+            """
+            INSERT INTO config (key, value)
+            VALUES (?, ?)
+            ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+            """,
+            [key, str(value)],
+        )
+        results.append(ConfigItem(key=key, value=str(value)))
+        
+    return results

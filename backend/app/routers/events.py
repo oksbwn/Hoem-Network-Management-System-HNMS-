@@ -56,27 +56,19 @@ def list_events(
         conn.close()
 
 @router.get("/stats", response_model=List[EventStats])
-def get_event_stats(days: int = 7):
-    """Returns the number of online devices over time for trend charts."""
+def get_event_stats(hours: int = 168):
+    """Returns the number of online devices over time for trend charts. Default 168h (7 days)."""
     conn = get_connection()
     try:
-        # We'll sample every few hours for the trend
-        # DuckDB query to get online count at various timestamps
-        # This is a bit complex for DuckDB without a calendar table, 
-        # but we can approximate by looking at the density of 'online' events
-        # or simply counting current online devices if we want the current trend.
-        
-        # For simplicity, let's return a history of "Online" status records grouped by hour
         sql = """
-            SELECT date_trunc('hour', changed_at) as ts, 
-                   count(*) FILTER (WHERE status = 'online') as on_cnt,
-                   count(*) FILTER (WHERE status = 'offline') as off_cnt
+            SELECT changed_at as ts, 
+                   CASE WHEN status = 'online' THEN 1 ELSE 0 END as on_cnt,
+                   CASE WHEN status = 'offline' THEN 1 ELSE 0 END as off_cnt
             FROM device_status_history
-            WHERE changed_at > now() - interval '1 day' * ?
-            GROUP BY ts
+            WHERE changed_at > now() - interval '1 hour' * ?
             ORDER BY ts ASC
         """
-        rows = conn.execute(sql, [days]).fetchall()
+        rows = conn.execute(sql, [hours]).fetchall()
         return [
             EventStats(timestamp=r[0], online_count=r[1], offline_count=r[2])
             for r in rows

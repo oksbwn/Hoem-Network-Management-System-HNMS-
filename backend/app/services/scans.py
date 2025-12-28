@@ -110,6 +110,17 @@ async def scan_ports(ip: str, ports: List[int] = None) -> List[Dict[str, Any]]:
     results = await asyncio.gather(*tasks)
     return [p for p in results if p is not None]
 
+def force_arp_entry(ip: str) -> None:
+    """Forces an ARP entry by sending a ping (Windows/Linux)."""
+    try:
+        # ping -n 1 on Windows, -c 1 on Linux. We detect strictly for Windows environment here or generic.
+        # Since we are on Windows per user env:
+        subprocess.run(["ping", "-n", "1", "-w", "500", ip], 
+                       stdout=subprocess.DEVNULL, 
+                       stderr=subprocess.DEVNULL)
+    except:
+        pass
+
 async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
     conn = get_connection()
     try:
@@ -160,6 +171,11 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
             
             ping_results = await asyncio.gather(*(sem_ping(ip) for ip in targets_to_ping))
             up_ips = [ip for is_up, ip in ping_results if is_up]
+            
+            # Force ARP cache population for discovered IPs
+            for ip in up_ips:
+                await asyncio.to_thread(force_arp_entry, ip)
+                
             arp_table = get_arp_table()
             
             for ip in up_ips:

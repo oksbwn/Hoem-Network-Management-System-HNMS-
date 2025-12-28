@@ -56,10 +56,10 @@ async def upsert_device_from_scan(
                     device_type = COALESCE(device_type, ?),
                     icon = COALESCE(icon, ?),
                     open_ports = ?,
-                    status = 'online'
+                    status = ?
                 WHERE id = ?
                 """,
-                [now, ip, mac, hostname, guessed_type, guessed_icon, json.dumps(ports), device_id]
+                [now, ip, mac, hostname, guessed_type, guessed_icon, json.dumps(ports), 'online', device_id]
             )
         else:
             is_new = True
@@ -72,7 +72,7 @@ async def upsert_device_from_scan(
             conn.execute(
                 """
                 INSERT INTO devices (id, ip, mac, name, display_name, device_type, icon, open_ports, first_seen, last_seen, attributes, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [device_id, ip, mac, hostname, hostname or ip, guessed_type, guessed_icon, json.dumps(ports), now, now, "{}", 'online']
             )
@@ -106,11 +106,17 @@ async def upsert_device_from_scan(
                 await enrich_device(device_id, mac)
 
         if is_new or old_status != 'online':
+            # Fetch latest metadata for MQTT enrichment
+            row = conn.execute("SELECT display_name, vendor, icon FROM devices WHERE id = ?", [device_id]).fetchone()
+            d_name, d_vendor, d_icon = row if row else (hostname or ip, None, None)
+
             device_info = {
                 "id": device_id,
                 "ip": ip,
                 "mac": mac,
-                "hostname": hostname,
+                "hostname": d_name,
+                "vendor": d_vendor,
+                "icon": d_icon,
                 "status": "online",
                 "timestamp": now.isoformat()
             }

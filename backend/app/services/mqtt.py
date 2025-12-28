@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
 import json
+from typing import Any
 from app.core.config import get_settings
 from app.core.db import get_connection
 
@@ -26,29 +27,87 @@ def get_mqtt_client():
     config = get_mqtt_config()
     client_id = f"{settings.app_name.lower().replace(' ', '_')}_backend"
     
-    # Use newer API version
-    client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
+    # Use standard client for 1.x compatibility
+    client = mqtt.Client(client_id=client_id)
     
     if config['username']:
         client.username_pw_set(config['username'], config['password'])
         
     return client
 
-def publish_event(topic_suffix: str, payload: dict):
+def publish_mqtt(topic: str, payload: Any, retain: bool = False):
     config = get_mqtt_config()
-    full_topic = f"{config['base_topic']}/{topic_suffix}"
-    
     try:
         client = get_mqtt_client()
         client.connect(config['broker'], config['port'], 60)
-        client.publish(full_topic, json.dumps(payload))
+        
+        msg = payload if isinstance(payload, str) else json.dumps(payload)
+        client.publish(topic, msg, retain=retain)
         client.disconnect()
     except Exception as e:
-        # We don't want to crash the scanner if MQTT is down
-        print(f"Failed to publish MQTT event: {e}")
+        print(f"Failed to publish to {topic}: {e}")
+
+def publish_ha_discovery(device_info: dict):
+    config = get_mqtt_config()
+    mac = device_info.get("mac")
+    if not mac: return
+    
+    mac_slug = mac.replace(":", "").lower()
+    base_topic = config['base_topic']
+    
+    # Use binary_sensor with connectivity class for reliable "online/offline" behavior
+    discovery_topic = f"homeassistant/binary_sensor/{base_topic}_{mac_slug}/config"
+    
+    discovery_payload = {
+        "name": device_info.get("hostname") or device_info.get("ip") or f"Device {mac}",
+        "state_topic": f"{base_topic}/device/{mac_slug}/state",
+        "json_attributes_topic": f"{base_topic}/device/{mac_slug}/attributes",
+        "unique_id": f"{base_topic}_{mac_slug}",
+        "device": {
+            "identifiers": [mac_slug],
+            "name": device_info.get("hostname") or f"Device {mac}",
+            "model": device_info.get("vendor", "Generic Network Device"),
+            "manufacturer": "HNMS Network Scanner",
+            "sw_version": "1.0.0"
+        },
+        "payload_on": "home",
+        "payload_off": "not_home",
+        "device_class": "connectivity"
+    }
+    
+    publish_mqtt(discovery_topic, discovery_payload, retain=True)
+
+def publish_device_status(device_info: dict, status: str):
+    config = get_mqtt_config()
+    mac = device_info.get("mac")
+    
+    # We need a slug for the topic
+    if mac:
+        key = mac.replace(":", "").lower()
+    else:
+        key = device_info.get("ip", "unknown").replace(".", "_")
+    
+    base_topic = config['base_topic']
+    state_topic = f"{base_topic}/device/{key}/state"
+    attr_topic = f"{base_topic}/device/{key}/attributes"
+    
+    # 'home'/'not_home' are standard for presence/connectivity
+    state_val = "home" if status == "online" else "not_home"
+    
+    # 1. Publish state and attributes
+    publish_mqtt(state_topic, state_val, retain=True)
+    publish_mqtt(attr_topic, device_info, retain=True)
+    
+    # 2. Publish legacy event for backwards compatibility (optional but safe)
+    legacy_topic = f"device/{status}"
+    publish_mqtt(f"{base_topic}/{legacy_topic}", device_info)
+    
+    # 3. Handle HA Discovery
+    if status == "online":
+        publish_ha_discovery(device_info)
 
 def publish_device_online(device_info: dict):
-    publish_event("device/online", device_info)
+    publish_device_status(device_info, "online")
 
 def publish_device_offline(device_info: dict):
-    publish_event("device/offline", device_info)
+    publish_device_status(device_info, "offline")

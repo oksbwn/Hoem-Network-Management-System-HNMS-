@@ -233,11 +233,11 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
         # We need to be careful not to mark everything offline if it was a targeted scan,
         # but for now, let's assume discovery scans should refresh status.
         offline_devices = conn.execute(
-            "SELECT id, ip, mac, display_name FROM devices WHERE status = 'online' AND last_seen < ?",
+            "SELECT id, ip, mac, display_name, vendor, icon FROM devices WHERE status = 'online' AND last_seen < ?",
             [now]
         ).fetchall()
         
-        for d_id, d_ip, d_mac, d_name in offline_devices:
+        for d_id, d_ip, d_mac, d_name, d_vendor, d_icon in offline_devices:
             print(f"DEBUG: Device {d_ip} ({d_id}) not seen in scan. Marking as OFFLINE.")
             conn.execute("UPDATE devices SET status = 'offline' WHERE id = ?", [d_id])
             record_status_change(conn, d_id, 'offline', datetime.now(timezone.utc))
@@ -246,6 +246,8 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
                 "ip": d_ip,
                 "mac": d_mac,
                 "hostname": d_name,
+                "vendor": d_vendor,
+                "icon": d_icon,
                 "status": "offline",
                 "timestamp": datetime.now(timezone.utc).isoformat()
             })

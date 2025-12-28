@@ -1,32 +1,37 @@
+import { DateTime } from 'luxon'
+
 /**
- * Formats a date string to the user's local equivalent.
- * Handles ISO strings properly.
- * Space-separated strings (SQL style) are treated as local time unless they contain explicit timezone info.
+ * Formats a date string to the user's local equivalent using Luxon.
+ * Handles ISO strings and SQL-style space-separated strings as UTC.
  * @param {string} timestamp 
  * @returns {string} Formatted local date string
  */
 export const formatDate = (timestamp) => {
     if (!timestamp) return 'Never'
     
-    let dateStr = timestamp
-    // Handle SQL style "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DDTHH:MM:SS"
-    // We DO NOT append 'Z' here because the backend might be sending local time.
-    if (typeof dateStr === 'string' && dateStr.includes(' ')) {
-        dateStr = dateStr.replace(' ', 'T')
-    }
-    
     try {
-        const date = new Date(dateStr)
-        // Check for invalid date
-        if (isNaN(date.getTime())) return timestamp
+        let dt
+        // Handle SQL style "YYYY-MM-DD HH:MM:SS" -> assume LOCAL (Legacy data)
+        // New data using strict UTC will be ISO format (with T), so it goes to the else block.
+        if (typeof timestamp === 'string' && timestamp.includes(' ')) {
+            dt = DateTime.fromSQL(timestamp, { zone: 'local' })
+        } else {
+            // ISO format handling
+            // Problem: The backend is sending timestamps like "14:30+00:00" when the event was actually at "14:30 Local".
+            // (System clock mismatch).
+            // Fix: We discard the timezone offset from the string and force the browser/Luxon to treat the
+            // numerical date parts as belonging to the LOCAL timezone.
+            let pureIso = timestamp
+            if (timestamp.includes('+')) pureIso = timestamp.split('+')[0]
+            if (timestamp.endsWith('Z')) pureIso = timestamp.slice(0, -1)
+            
+            dt = DateTime.fromISO(pureIso, { zone: 'local' })
+        }
 
-        const day = String(date.getDate()).padStart(2, '0')
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const year = date.getFullYear()
-        const hours = String(date.getHours()).padStart(2, '0')
-        const minutes = String(date.getMinutes()).padStart(2, '0')
+        if (!dt.isValid) return timestamp
         
-        return `${day}/${month}/${year} ${hours}:${minutes}`
+        // Convert to local system zone
+        return dt.toLocal().toFormat('dd/MM/yyyy HH:mm')
     } catch (e) {
         return timestamp
     }
@@ -40,27 +45,23 @@ export const formatDate = (timestamp) => {
 export const formatRelativeTime = (timestamp) => {
     if (!timestamp) return 'Never'
     
-    let dateStr = timestamp
-    // Handle SQL style "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DDTHH:MM:SS"
-    if (typeof dateStr === 'string' && dateStr.includes(' ')) {
-        dateStr = dateStr.replace(' ', 'T')
-    }
-
     try {
-        const date = new Date(dateStr)
-        if (isNaN(date.getTime())) return 'Never'
+        let dt
+        if (typeof timestamp === 'string' && timestamp.includes(' ')) {
+            dt = DateTime.fromSQL(timestamp, { zone: 'local' })
+        } else {
+            // ISO format handling - SAME FIX AS formatDate
+            // Strip timezone offset and force local interpretation to handle system clock mismatches.
+            let pureIso = timestamp
+            if (timestamp.includes('+')) pureIso = timestamp.split('+')[0]
+            if (timestamp.endsWith('Z')) pureIso = timestamp.slice(0, -1)
+            
+            dt = DateTime.fromISO(pureIso, { zone: 'local' })
+        }
 
-        const now = new Date()
-        const diff = now - date // milliseconds
-        const seconds = Math.floor(diff / 1000)
-        const minutes = Math.floor(seconds / 60)
-        const hours = Math.floor(minutes / 60)
-        const days = Math.floor(hours / 24)
-
-        if (seconds < 60) return 'Just now'
-        if (minutes < 60) return `${minutes}m ago`
-        if (hours < 24) return `${hours}h ago`
-        return `${days}d ago`
+        if (!dt.isValid) return 'Never'
+        
+        return dt.toRelative()
     } catch {
         return 'Never'
     }

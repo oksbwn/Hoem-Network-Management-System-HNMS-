@@ -11,8 +11,13 @@ router = APIRouter()
 def get_scan_gist():
     conn = get_connection()
     try:
-        # Get the latest finished scan
-        row = conn.execute(
+        # Aggregates for Metrics
+        total_count = conn.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
+        done_count = conn.execute("SELECT COUNT(*) FROM scans WHERE status = 'done'").fetchone()[0]
+        running_count = conn.execute("SELECT COUNT(*) FROM scans WHERE status IN ('running', 'queued')").fetchone()[0]
+        
+        # Latest scan info
+        latest_row = conn.execute(
             """
             SELECT id, started_at, finished_at, target
             FROM scans
@@ -22,45 +27,14 @@ def get_scan_gist():
             """
         ).fetchone()
         
-        if not row:
-            return {"has_scan": False}
+        last_scan_time = latest_row[2] if latest_row else None
         
-        scan_id, started_at, finished_at, target = row
-        
-        # Count results for this scan
-        count_row = conn.execute(
-            "SELECT COUNT(*) FROM scan_results WHERE scan_id = ?", [scan_id]
-        ).fetchone()
-        device_count = count_row[0] if count_row else 0
-        
-        duration = None
-        if started_at and finished_at:
-            # DuckDB might return strings or datetime objects depending on driver/setup
-            # Let's assume they are handled or we can calculate difference
-            # For simplicity, we can just return the raw values or try basic diff
-            try:
-                if isinstance(started_at, str):
-                    started_at = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
-                if isinstance(finished_at, str):
-                    finished_at = datetime.fromisoformat(finished_at.replace('Z', '+00:00'))
-                
-                # Ensure both are aware for duration calculation
-                if started_at and started_at.tzinfo is None:
-                    started_at = started_at.replace(tzinfo=timezone.utc)
-                if finished_at and finished_at.tzinfo is None:
-                    finished_at = finished_at.replace(tzinfo=timezone.utc)
-                    
-                duration = (finished_at - started_at).total_seconds()
-            except:
-                duration = 0
-
         return {
-            "has_scan": True,
-            "scan_id": scan_id,
-            "finished_at": finished_at,
-            "target": target,
-            "device_count": device_count,
-            "duration_seconds": duration
+            "total_scans": total_count,
+            "scans_done": done_count,
+            "scans_running": running_count,
+            "last_scan_time": last_scan_time,
+            "has_scan": latest_row is not None
         }
     finally:
         conn.close()

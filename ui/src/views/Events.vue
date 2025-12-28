@@ -130,15 +130,16 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-xs text-slate-900 dark:text-slate-200 font-medium">
-                  {{ formatDistance(new Date(event.changed_at), new Date(), { addSuffix: true }) }}
+                  {{ formatRelativeTime(event.changed_at) }}
                 </div>
                 <div class="text-[9px] text-slate-400 tracking-tight">
-                  {{ format(new Date(event.changed_at), 'MMM dd, HH:mm') }}
+                  {{ formatDate(event.changed_at) }}
                 </div>
               </td>
               <td class="px-8 py-4 text-right">
                 <button @click="showDeviceDetail(event)"
-                  class="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-100/50 dark:hover:bg-blue-900/30 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                  class="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-100/50 dark:hover:bg-blue-900/30 rounded-xl transition-all"
+                  v-tooltip="'View Details'">
                   <ArrowRightCircleIcon class="h-5 w-5" />
                 </button>
               </td>
@@ -280,10 +281,7 @@
                     </div>
                     <div class="text-right">
                       <div class="text-[11px] font-bold text-slate-900 dark:text-slate-200">
-                        {{ format(new Date(h.changed_at), 'HH:mm:ss') }}
-                      </div>
-                      <div class="text-[9px] text-slate-400 uppercase font-black tracking-tight mt-0.5">
-                        {{ format(new Date(h.changed_at), 'MMM dd, yyyy') }}
+                        {{ formatDate(h.changed_at) }}
                       </div>
                     </div>
                   </div>
@@ -314,11 +312,43 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
-import { formatDistance, format } from 'date-fns'
+import { formatRelativeTime, formatDate } from '@/utils/date'
 import {
-  RefreshCwIcon, SearchIcon, ActivityIcon, ArrowRightCircleIcon, XIcon, Loader2Icon, ZapOffIcon, InboxIcon,
-  ChevronLeftIcon, ChevronRightIcon, LaptopIcon, SmartphoneIcon, ServerIcon, GlobeIcon, CpuIcon, TvIcon, WifiIcon, WifiOffIcon,
-  TabletIcon, MonitorIcon, RouterIcon, NetworkIcon, LayersIcon, RssIcon, PrinterIcon, HardDriveIcon, Gamepad2Icon, HelpCircleIcon, LightbulbIcon, PlugIcon, MicrochipIcon, CameraIcon, WavesIcon, SpeakerIcon, PlayIcon
+  RefreshCw as RefreshCwIcon,
+  Search as SearchIcon,
+  Activity as ActivityIcon,
+  ArrowRightCircle as ArrowRightCircleIcon,
+  X as XIcon,
+  Loader2 as Loader2Icon,
+  ZapOff as ZapOffIcon,
+  Inbox as InboxIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Laptop as LaptopIcon,
+  Smartphone as SmartphoneIcon,
+  Server as ServerIcon,
+  Globe as GlobeIcon,
+  Cpu as CpuIcon,
+  Tv as TvIcon,
+  Wifi as WifiIcon,
+  WifiOff as WifiOffIcon,
+  Tablet as TabletIcon,
+  Monitor as MonitorIcon,
+  Router as RouterIcon,
+  Network as NetworkIcon,
+  Layers as LayersIcon,
+  Rss as RssIcon,
+  Printer as PrinterIcon,
+  HardDrive as HardDriveIcon,
+  Gamepad2 as Gamepad2Icon,
+  HelpCircle as HelpCircleIcon,
+  Lightbulb as LightbulbIcon,
+  Plug as PlugIcon,
+  Microchip as MicrochipIcon,
+  Camera as CameraIcon,
+  Waves as WavesIcon,
+  Speaker as SpeakerIcon,
+  Play as PlayIcon
 } from 'lucide-vue-next'
 
 // State

@@ -250,7 +250,7 @@ def update_device_fields(device_id: str, fields: Dict[str, Any]) -> Optional[Dic
         
         # 3. Return updated device
         updated = conn.execute(
-            "SELECT id, ip, mac, name, display_name, device_type, vendor, icon, status FROM devices WHERE id = ?", 
+            "SELECT id, ip, mac, name, display_name, device_type, vendor, icon, status, first_seen, last_seen FROM devices WHERE id = ?", 
             [device_id]
         ).fetchone()
         
@@ -263,7 +263,9 @@ def update_device_fields(device_id: str, fields: Dict[str, Any]) -> Optional[Dic
             "device_type": updated[5],
             "vendor": updated[6],
             "icon": updated[7],
-            "status": updated[8]
+            "status": updated[8],
+            "first_seen": updated[9],
+            "last_seen": updated[10]
         }
     finally:
         conn.close()

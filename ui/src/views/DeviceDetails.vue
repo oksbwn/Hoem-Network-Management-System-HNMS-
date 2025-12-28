@@ -1,122 +1,307 @@
 <template>
-  <div v-if="device" class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center gap-4">
-      <router-link to="/devices"
-        class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400"
-        v-tooltip="'Back to Device List'">
-        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-      </router-link>
-      <div class="flex-1">
-        <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">{{ form.display_name || 'Device Details' }}
-        </h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ device.ip }}</p>
+  <div v-if="device" class="space-y-6 max-w-7xl mx-auto pb-12">
+    <!-- Notifications -->
+    <TransitionGroup enter-active-class="transform transition ease-out duration-300"
+      enter-from-class="translate-y-[-20px] opacity-0" enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0"
+      class="fixed top-6 right-6 z-[60] flex flex-col gap-2">
+      <div v-if="successMessage" key="success"
+        class="px-4 py-3 rounded-xl bg-emerald-500/90 backdrop-blur-md text-white shadow-lg border border-emerald-400/50 flex items-center gap-3">
+        <CheckCircle class="w-5 h-5" />
+        <span class="text-sm font-medium">{{ successMessage }}</span>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="inline-flex px-3 py-1 text-xs font-medium rounded"
-          :class="device.status === 'online' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'">
-          {{ device.status }}
-        </span>
+      <div v-if="errorMessage" key="error"
+        class="px-4 py-3 rounded-xl bg-rose-500/90 backdrop-blur-md text-white shadow-lg border border-rose-400/50 flex items-center gap-3">
+        <AlertCircle class="w-5 h-5" />
+        <span class="text-sm font-medium">{{ errorMessage }}</span>
+      </div>
+    </TransitionGroup>
+
+    <!-- Header Area -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <router-link to="/devices"
+          class="p-2.5 bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 shadow-sm"
+          v-tooltip="'Back to Device List'">
+          <ArrowLeft class="w-5 h-5" />
+        </router-link>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">
+              {{ form.display_name || device.name || 'Unnamed Device' }}
+            </h1>
+            <div :class="[
+              device.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400',
+              'w-2 h-2 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+            ]"></div>
+          </div>
+          <p class="text-sm font-mono text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-2">
+            <span class="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-bold">IP</span>
+            {{ device.ip }}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
         <button @click="runDeepScan" :disabled="isScanning"
-          class="px-4 py-2 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-          v-tooltip="'Scan top 1000 ports'">
+          class="px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-sm font-bold transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100 shadow-xl shadow-slate-900/10 dark:shadow-white/5"
+          v-tooltip="'Deep Port Audit (Scan top 1000 ports)'">
           <component :is="isScanning ? Loader2 : Scan" class="w-4 h-4" :class="{ 'animate-spin': isScanning }" />
-          {{ isScanning ? 'Scanning...' : 'Deep Scan' }}
+          {{ isScanning ? 'Auditing...' : 'Deep Scan' }}
         </button>
         <button @click="saveChanges"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-          v-tooltip="'Save Device Changes'">
+          class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-blue-500/20"
+          v-tooltip="'Save Device Configuration'">
           Save Changes
         </button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Info Card -->
-      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Device Information</h2>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Display Name</label>
-            <input v-model="form.display_name" type="text"
-              class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IP Assignment</label>
-            <select v-model="form.attributes.ip_allocation"
-              class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none">
-              <option :value="undefined">Unknown</option>
-              <option value="static">Static IP</option>
-              <option value="dhcp">DHCP</option>
-            </select>
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Column 1 & 2: Main Info -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Device Info Card -->
+        <div
+          class="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-8 shadow-2xl overflow-hidden group">
+          <div
+            class="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity">
+            <component :is="getIconComponent(device.device_type)" class="w-32 h-32" />
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Hostname</label>
-            <input v-model="form.name" type="text"
-              class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+            <div class="w-1.5 h-6 bg-blue-500 rounded-full"></div>
+            Device Identification
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+            <div class="space-y-1">
+              <label
+                class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Display
+                Name</label>
+              <input v-model="form.display_name" type="text" placeholder="Friendly Name"
+                class="w-full px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium" />
+            </div>
+
+            <div class="space-y-1">
+              <label
+                class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Device
+                Category</label>
+              <select v-model="form.device_type"
+                class="w-full px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium appearance-none">
+                <option value="unknown">Unknown</option>
+                <option value="Router/Gateway">Router/Gateway</option>
+                <option value="Switch/Bridge">Switch/Bridge</option>
+                <option value="Desktop">Desktop</option>
+                <option value="Laptop">Laptop</option>
+                <option value="Mobile">Mobile</option>
+                <option value="IoT">IoT</option>
+                <option value="Printer">Printer</option>
+                <option value="Camera">Security Camera</option>
+              </select>
+            </div>
+
+            <div class="space-y-1">
+              <label
+                class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Network
+                Hostname</label>
+              <input v-model="form.name" type="text"
+                class="w-full px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-mono text-sm" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-[10px] font-black uppercase tracking-widest text_slate-400 dark:text-slate-500 ml-1">IP
+                Reservation</label>
+              <select v-model="form.attributes.ip_allocation"
+                class="w-full px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium appearance-none">
+                <option :value="undefined">Dynamic (DHCP)</option>
+                <option value="static">Static IP</option>
+                <option value="dhcp">DHCP Reserved</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Device Type</label>
-            <select v-model="form.device_type"
-              class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
-              <option value="unknown">Unknown</option>
-              <option value="Router/Gateway">Router/Gateway</option>
-              <option value="Desktop">Desktop</option>
-              <option value="Laptop">Laptop</option>
-              <option value="Mobile">Mobile</option>
-              <option value="IoT">IoT</option>
-              <option value="Printer">Printer</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+
+          <div
+            class="mt-8 pt-8 border-t border-slate-100 dark:border-slate-700/50 grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">IP Address</div>
-              <div class="text-sm font-mono text-slate-900 dark:text-white">{{ device.ip }}</div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Manufacturer</div>
+              <div class="text-sm font-bold text-slate-900 dark:text-white">{{ device.vendor || 'Unknown' }}</div>
             </div>
             <div>
-              <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">MAC Address</div>
-              <div class="text-sm font-mono text-slate-900 dark:text-white">{{ device.mac || 'N/A' }}</div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">MAC Signature</div>
+              <div class="text-sm font-mono text-slate-600 dark:text-slate-400">{{ device.mac || 'N/A' }}</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">First Seen</div>
+              <div class="text-sm font-bold text-slate-900 dark:text-white">{{ formatTime(device.first_seen) }}</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Network Path</div>
+              <div class="text-sm font-bold text-slate-900 dark:text-white">{{ device.internet_path || 'Local LAN' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Availability Trend Chart -->
+        <div
+          class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-8 shadow-2xl relative overflow-hidden group">
+          <div class="flex items-center justify-between mb-8">
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <div class="w-1.5 h-6 bg-blue-500 rounded-full"></div>
+              Network Availability History
+            </h2>
+            <div
+              class="px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black tracking-widest uppercase">
+              Full Record
+            </div>
+          </div>
+
+          <div class="h-64">
+            <apexchart v-if="chartSeries && chartSeries[0].data.length > 0" type="area" height="100%"
+              :options="chartOptions" :series="chartSeries"></apexchart>
+            <div v-else class="h-full flex flex-col items-center justify-center text-slate-400 italic text-sm gap-2">
+              <Loader2 class="w-5 h-5 animate-spin opacity-20" />
+              <span>Collecting historical trend data...</span>
+            </div>
+          </div>
+
+          <!-- Detailed Activity Log Table -->
+          <div class="mt-8 pt-8 border-t border-slate-100 dark:border-slate-700/50">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Recent Activity Log</h3>
+              <span class="text-[10px] font-bold text-slate-400">{{ history.length }} Events Recorded</span>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              <div v-for="h in history" :key="h.id"
+                class="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800/50 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 transition-all group/item">
+                <div class="flex items-center gap-4">
+                  <div :class="h.status === 'online' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'"
+                    class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-black/5">
+                    <component :is="h.status === 'online' ? Wifi : WifiOff" class="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span class="text-xs font-black uppercase tracking-widest"
+                      :class="h.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                      {{ h.status }}
+                    </span>
+                    <p class="text-[10px] text-slate-500 mt-0.5 leading-none font-medium">
+                      Scan found device {{ h.status }} at IP {{ device.ip }}
+                    </p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[11px] font-bold text-slate-900 dark:text-white">
+                    {{ new Date(h.changed_at).toLocaleTimeString([], {
+                      hour: '2-digit', minute: '2-digit', second:
+                        '2-digit'
+                    }) }}
+                  </div>
+                  <div class="text-[9px] text-slate-400 uppercase font-black tracking-tight mt-0.5">
+                    {{ new Date(h.changed_at).toLocaleDateString([], {
+                      month: 'short', day: 'numeric', year: 'numeric'
+                    }) }}
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="history.length === 0" class="py-12 text-center">
+                <p class="text-xs text-slate-400 italic">No historical events recorded for this device yet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Health & Uptime Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div
+            class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-6 shadow-xl">
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Longest Streak</div>
+            <div class="text-2xl font-black text-emerald-500">{{ longestOnlineStreak }} <span
+                class="text-xs font-medium text-slate-400">hours</span></div>
+            <div class="mt-2 text-[10px] text-slate-500">Continuous connectivity record</div>
+          </div>
+          <div
+            class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-6 shadow-xl">
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Avg Offline</div>
+            <div class="text-2xl font-black text-rose-500">{{ avgOfflineDuration }} <span
+                class="text-xs font-medium text-slate-400">mins</span></div>
+            <div class="mt-2 text-[10px] text-slate-500">Typical downtime between events</div>
+          </div>
+          <div
+            class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-6 shadow-xl">
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Uptime</div>
+            <div class="text-2xl font-black text-blue-500">{{ uptimePercentage }}%</div>
+            <div class="mt-2 text-[10px] text-slate-500">Network reliability score</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Ports & Services -->
+      <div class="space-y-6">
+        <div class="bg-slate-900 dark:bg-slate-950 rounded-3xl p-8 shadow-2xl relative overflow-hidden h-full">
+          <!-- Background Decoration -->
+          <div class="absolute -bottom-12 -right-12 w-48 h-48 bg-blue-500/10 dark:bg-blue-400/5 rounded-full blur-3xl">
+          </div>
+
+          <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+            <div class="w-1.5 h-6 bg-blue-400 rounded-full"></div>
+            Audited Services
+          </h2>
+
+          <div v-if="parsedPorts.length > 0" class="space-y-3 relative z-10">
+            <div v-for="port in parsedPorts" :key="port.port"
+              class="group flex items-center justify-between p-4 bg-white/5 dark:bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all">
+              <div class="flex items-center gap-4">
+                <div class="flex flex-col items-center justify-center">
+                  <div class="text-xs font-black text-blue-400 tracking-tighter">{{ port.port }}</div>
+                  <div class="text-[8px] font-black text-slate-500 uppercase">{{ port.protocol || 'TCP' }}</div>
+                </div>
+                <div>
+                  <div class="text-sm font-bold text-white">{{ port.service || 'Unknown' }}</div>
+                  <div class="text-[10px] text-slate-500 font-medium">Service Active</div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button v-if="port.port === 22" @click="openSSH(port.port)"
+                  class="p-2 transition-all rounded-lg bg-white/10 hover:bg-white text-white hover:text-slate-900"
+                  v-tooltip="'Terminal Access'">
+                  <Terminal class="w-4 h-4" />
+                </button>
+                <a v-if="[80, 443, 8080, 8000, 3000].includes(port.port)" :href="`http://${device.ip}:${port.port}`"
+                  target="_blank"
+                  class="p-2 transition-all rounded-lg bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white"
+                  v-tooltip="'Open Interface'">
+                  <ExternalLink class="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="flex flex-col items-center justify-center py-20 text-center space-y-4">
+            <div class="p-6 bg-white/5 rounded-full">
+              <ShieldAlert class="w-12 h-12 text-slate-700" />
+            </div>
+            <div>
+              <p class="text-white font-bold">No Open Ports</p>
+              <p class="text-xs text-slate-500 mt-1 max-w-[180px]">Run a Deep Scan to audit common network services.</p>
+            </div>
+          </div>
+
+          <div class="mt-8 pt-8 border-t border-white/10">
+            <div
+              class="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <span>Last Audit Scan</span>
+              <span class="text-slate-400">{{ formatRelativeTime(device.last_seen) }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Ports Card -->
-      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Open Ports</h2>
-        <div v-if="parsedPorts.length > 0" class="space-y-2">
-          <div v-for="port in parsedPorts" :key="port.port"
-            class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
-            <div class="flex items-center gap-3">
-              <div
-                class="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-mono text-xs font-semibold flex items-center justify-center">
-                {{ port.port }}
-              </div>
-              <div>
-                <div class="text-sm font-medium text-slate-900 dark:text-white">{{ port.service || 'Unknown' }}</div>
-                <div class="text-xs text-slate-500">{{ port.protocol || 'TCP' }}</div>
-              </div>
-            </div>
-            <button v-if="port.port === 22" @click="openSSH(port.port)"
-              class="px-3 py-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-medium rounded hover:opacity-90 transition-opacity"
-              v-tooltip="'Open Web-based SSH Terminal'">
-              SSH
-            </button>
-            <a v-if="[80, 443, 3000, 8080, 8000].includes(port.port)" :href="`http://${device.ip}:${port.port}`"
-              target="_blank"
-              class="px-3 py-1 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 transition-colors"
-              v-tooltip="'Open Service in New Tab'">
-              Open
-            </a>
-          </div>
-        </div>
-        <div v-else class="text-center py-12">
-          <div class="text-sm text-slate-500">No open ports detected</div>
-        </div>
-      </div>
     </div>
 
     <TerminalModal v-if="showTerminal" :device="device" :port="sshPort" @close="showTerminal = false" />
@@ -128,7 +313,27 @@ import { ref, onMounted, reactive, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import TerminalModal from '../components/TerminalModal.vue'
-import { Scan, Loader2 } from 'lucide-vue-next'
+import {
+  Scan,
+  Loader2,
+  ArrowLeft,
+  CheckCircle,
+  AlertCircle,
+  Layers,
+  Terminal,
+  ExternalLink,
+  ShieldAlert,
+  Monitor,
+  Laptop,
+  Smartphone,
+  Cpu,
+  Wifi,
+  WifiOff,
+  Database,
+  Camera,
+  HardDrive
+} from 'lucide-vue-next'
+import { formatRelativeTime } from '@/utils/date'
 
 const route = useRoute()
 const device = ref(null)
@@ -138,6 +343,202 @@ const sshPort = ref(22)
 const form = reactive({ display_name: '', name: '', device_type: '', attributes: {} })
 
 const isScanning = ref(false)
+const successMessage = ref('')
+const errorMessage = ref('')
+const history = ref([])
+const fidelityHistory = ref([])
+
+const formatTime = (ts) => {
+  if (!ts) return 'Unknown'
+  return new Date(ts).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+const getIconComponent = (type) => {
+  const map = {
+    'Router/Gateway': Wifi,
+    'Switch/Bridge': Layers,
+    'Desktop': Monitor,
+    'Laptop': Laptop,
+    'Mobile': Smartphone,
+    'IoT': Cpu,
+    'Printer': Database,
+    'Camera': Camera,
+    'NAS': HardDrive
+  }
+  return map[type] || Cpu
+}
+
+// Logic for Availability Visualization
+const longestOnlineStreak = computed(() => {
+  if (history.value.length === 0) return 0
+  let maxHours = 0
+  let currentStreak = 0
+
+  const sorted = [...history.value].reverse()
+  const now = new Date()
+
+  for (let i = 0; i < sorted.length; i++) {
+    const start = new Date(sorted[i].changed_at)
+    const end = (i < sorted.length - 1) ? new Date(sorted[i + 1].changed_at) : now
+
+    if (sorted[i].status === 'online') {
+      const diffHours = (end - start) / (1000 * 60 * 60)
+      if (diffHours > 0) currentStreak += diffHours
+    } else {
+      maxHours = Math.max(maxHours, currentStreak)
+      currentStreak = 0
+    }
+  }
+  return Math.round(Math.max(maxHours, currentStreak))
+})
+
+const avgOfflineDuration = computed(() => {
+  if (history.value.length === 0) return 0
+
+  let totalMins = 0
+  let counts = 0
+
+  const sorted = [...history.value].reverse()
+  const now = new Date()
+
+  for (let i = 0; i < sorted.length; i++) {
+    const start = new Date(sorted[i].changed_at)
+    const end = (i < sorted.length - 1) ? new Date(sorted[i + 1].changed_at) : now
+
+    if (sorted[i].status === 'offline') {
+      const diffMins = (end - start) / (1000 * 60)
+      if (diffMins > 0) {
+        totalMins += diffMins
+        counts++
+      }
+    }
+  }
+  return counts > 0 ? Math.round(totalMins / counts) : 0
+})
+const availabilitySummary = computed(() => {
+  // Create 24 blocks for the last 24 hours
+  const blocks = []
+  const now = new Date()
+
+  for (let i = 23; i >= 0; i--) {
+    const blockTime = new Date(now.getTime() - i * 60 * 60 * 1000)
+    const label = blockTime.getHours() + ':00'
+
+    // Find history event closest to this time
+    // For now, simpler: check if device was online in that window
+    // Higher fidelity: find last status before this window
+    const eventInWindow = history.value.find(e => {
+      const et = new Date(e.changed_at)
+      return et <= blockTime
+    })
+
+    blocks.push({
+      time: i,
+      label,
+      status: eventInWindow ? eventInWindow.status : (device.value?.status || 'unknown')
+    })
+  }
+  return blocks
+})
+
+const uptimePercentage = computed(() => {
+  if (availabilitySummary.value.length === 0) return 0
+  const onlineCount = availabilitySummary.value.filter(b => b.status === 'online').length
+  return Math.round((onlineCount / availabilitySummary.value.length) * 100)
+})
+
+const chartOptions = computed(() => ({
+  chart: {
+    id: 'device-availability',
+    toolbar: { show: false },
+    background: 'transparent',
+    animations: { enabled: true, easing: 'easeinout', speed: 800 },
+    fontFamily: 'inherit',
+    dropShadow: {
+      enabled: true,
+      top: 10,
+      left: 0,
+      blur: 10,
+      color: '#3b82f6',
+      opacity: 0.15
+    }
+  },
+  xaxis: {
+    type: 'datetime',
+    labels: {
+      style: { colors: '#94a3b8', fontSize: '9px', fontWeight: 600 },
+      datetimeFormatter: {
+        year: 'yyyy',
+        month: 'MMM',
+        day: 'dd MMM',
+        hour: 'HH:mm'
+      }
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false }
+  },
+  yaxis: {
+    labels: { show: false },
+    min: 0,
+    max: 1.1,
+    tickAmount: 1
+  },
+  grid: {
+    borderColor: 'rgba(148, 163, 184, 0.05)',
+    strokeDashArray: 6,
+    padding: { left: 0, right: 0 }
+  },
+  tooltip: {
+    theme: 'dark',
+    x: { format: 'MMM dd, HH:mm' },
+    y: {
+      formatter: (val) => val === 1 ? 'Online' : 'Offline'
+    }
+  },
+  colors: ['#3b82f6'],
+  stroke: { curve: 'smooth', width: 4 },
+  markers: {
+    size: 0,
+    hover: {
+      size: 6,
+      colors: ['#3b82f6'],
+      strokeColors: '#fff',
+      strokeWidth: 3
+    }
+  },
+  dataLabels: { enabled: false },
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shadeIntensity: 1,
+      opacityFrom: 0.5,
+      opacityTo: 0.0,
+      stops: [0, 90, 100],
+      colorStops: [
+        { offset: 0, color: "#3b82f6", opacity: 0.5 },
+        { offset: 100, color: "#3b82f6", opacity: 0 }
+      ]
+    }
+  }
+}))
+
+const chartSeries = computed(() => {
+  if (!fidelityHistory.value || fidelityHistory.value.length === 0) return [{ name: 'Status', data: [] }]
+
+  return [{
+    name: 'Status',
+    data: fidelityHistory.value
+      .filter(h => h && h.timestamp)
+      .map(h => {
+        const ts = new Date(h.timestamp).getTime()
+        return {
+          x: isNaN(ts) ? 0 : ts,
+          y: h.status === 'online' ? 1 : 0
+        }
+      })
+      .filter(p => p.x > 0)
+  }]
+})
 
 const parsedPorts = computed(() => {
   if (!device.value || !device.value.open_ports) return []
@@ -166,12 +567,16 @@ const parsedPorts = computed(() => {
 const runDeepScan = async () => {
   if (isScanning.value) return
   isScanning.value = true
+  successMessage.value = ''
+  errorMessage.value = ''
   try {
     await axios.post(`/api/v1/scans/device/${device.value.id}`)
     await fetchDevice() // Refresh details to show new ports
-    alert('Scan complete')
+    successMessage.value = 'Port scan complete'
+    setTimeout(() => successMessage.value = '', 5000)
   } catch (e) {
-    alert('Scan failed')
+    errorMessage.value = 'Scan failed: ' + (e.response?.data?.detail || e.message)
+    setTimeout(() => errorMessage.value = '', 5000)
   } finally {
     isScanning.value = false
   }
@@ -202,16 +607,34 @@ const fetchDevice = async () => {
 }
 
 const saveChanges = async () => {
+  successMessage.value = ''
+  errorMessage.value = ''
   try {
     await axios.put(`/api/v1/devices/${device.value.id}`, form)
-    alert('Changes saved')
+    successMessage.value = 'Changes saved'
+    setTimeout(() => successMessage.value = '', 3000)
     fetchDevice()
   } catch (e) {
-    alert('Failed to save')
+    errorMessage.value = 'Failed to save: ' + (e.response?.data?.detail || e.message)
+    setTimeout(() => errorMessage.value = '', 5000)
+  }
+}
+
+const fetchHistory = async () => {
+  try {
+    const res = await axios.get(`/api/v1/events/device/${route.params.id}?limit=200`)
+    history.value = res.data
+
+    // Also fetch high-fidelity data for the chart
+    const fidelityRes = await axios.get(`/api/v1/events/device/${route.params.id}/fidelity?hours=24`)
+    fidelityHistory.value = fidelityRes.data
+  } catch (e) {
+    console.error('Failed to fetch history:', e)
   }
 }
 
 onMounted(() => {
   fetchDevice()
+  fetchHistory()
 })
 </script>

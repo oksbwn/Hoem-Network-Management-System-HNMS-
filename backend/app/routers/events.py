@@ -3,6 +3,7 @@ from typing import List, Annotated
 from app.core.db import get_connection
 from app.models.events import DeviceEvent, EventStats
 from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
 
@@ -135,5 +136,55 @@ def get_device_events_count(device_id: str):
     try:
         count = conn.execute("SELECT count(*) FROM device_status_history WHERE device_id = ?", [device_id]).fetchone()[0]
         return {"total": count}
+    finally:
+        conn.close()
+
+@router.get("/device/{device_id}/fidelity")
+def get_device_fidelity_history(device_id: str, hours: int = 24):
+    """
+    Returns high-granularity status data by checking every scan result.
+    If a scan occurred and the device wasn't found, it's marked as offline.
+    """
+    conn = get_connection()
+    try:
+        # 1. Get device details
+        device = conn.execute("SELECT mac, ip FROM devices WHERE id = ?", [device_id]).fetchone()
+        if not device:
+            return []
+        mac, ip = device
+
+        # 2. Get all successful discovery scans in the window
+        # We look at scans that finished successfully
+        scans = conn.execute(
+            """
+            SELECT id, finished_at 
+            FROM scans 
+            WHERE status = 'done' 
+              AND scan_type IN ('arp', 'discovery')
+              AND finished_at > now() - interval '1 hour' * ?
+            ORDER BY finished_at ASC
+            """,
+            [hours]
+        ).fetchall()
+
+        # 3. For each scan, check if the device was seen
+        fidelity_data = []
+        for scan_id, finished_at in scans:
+            # Check if MAC (primary) or IP (fallback) was found in this scan's results
+            seen = conn.execute(
+                """
+                SELECT count(*) FROM scan_results 
+                WHERE scan_id = ? AND (mac = ? OR ip = ?)
+                """,
+                [scan_id, mac, ip]
+            ).fetchone()[0]
+
+            if finished_at:
+                fidelity_data.append({
+                    "timestamp": finished_at,
+                    "status": "online" if seen > 0 else "offline"
+                })
+
+        return fidelity_data
     finally:
         conn.close()

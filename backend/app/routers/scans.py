@@ -134,18 +134,8 @@ def list_scans(page: int = 1, limit: int = 20):
         try:
             options = json.loads(r[3]) if (len(r) > 3 and r[3]) else None
             
-            def ensure_aware(dt):
-                if dt and isinstance(dt, datetime) and dt.tzinfo is None:
-                    return dt.replace(tzinfo=timezone.utc)
-                if isinstance(dt, str):
-                    try:
-                        parsed = datetime.fromisoformat(dt.replace('Z', '+00:00'))
-                        if parsed.tzinfo is None:
-                            return parsed.replace(tzinfo=timezone.utc)
-                        return parsed
-                    except:
-                        return None
-                return dt
+            # options logic remains
+            options = json.loads(r[3]) if (len(r) > 3 and r[3]) else None
 
             item_dict = {
                 "id": r[0],
@@ -153,9 +143,9 @@ def list_scans(page: int = 1, limit: int = 20):
                 "scan_type": r[2],
                 "options": options,
                 "status": r[4],
-                "created_at": ensure_aware(r[5]) or datetime.now(timezone.utc),
-                "started_at": ensure_aware(r[6]),
-                "finished_at": ensure_aware(r[7]),
+                "created_at": r[5],
+                "started_at": r[6],
+                "finished_at": r[7],
                 "error_message": r[8],
             }
             try:

@@ -15,6 +15,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8001',
         changeOrigin: true,
+      },
+      '/api/v1/ssh': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        ws: true,
       }
     }
   }

@@ -40,7 +40,7 @@
               Device</th>
             <th
               class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Vendor</th>
+              Vendor & Services</th>
             <th
               class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Type</th>
@@ -73,9 +73,16 @@
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
+            <td class="px-6 py-4">
               <div class="text-sm text-gray-900 dark:text-gray-200">{{ device.vendor || 'Unknown Vendor' }}</div>
-              <div class="text-xs text-gray-500 font-mono">{{ device.mac || 'No MAC' }}</div>
+              <div class="text-xs text-gray-500 font-mono mb-1">{{ device.mac || 'No MAC' }}</div>
+              <div class="flex flex-wrap gap-1 mt-1">
+                <span v-for="port in parsePorts(device.open_ports)" :key="port.port"
+                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                  :class="getPortColor(port.port)">
+                  {{ port.service || port.port }}
+                </span>
+              </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span
@@ -338,6 +345,39 @@ const isOnline = (d) => {
 const formatTime = (t) => {
   if (!t) return 'Never'
   return new Date(t).toLocaleString()
+}
+
+const parsePorts = (portsJson) => {
+  if (!portsJson) return []
+  try {
+    const parsed = JSON.parse(portsJson)
+    // Handle both simple int list and new dict list
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      if (typeof parsed[0] === 'number') {
+        // Backwards compat if any mixed
+        return parsed.map(p => ({ port: p, service: p }))
+      }
+      return parsed
+    }
+    return []
+  } catch {
+    return []
+  }
+}
+
+const getPortColor = (port) => {
+  const map = {
+    22: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300', // SSH
+    80: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', // HTTP
+    443: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300', // HTTPS
+    53: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300', // DNS
+    3000: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', // Dev
+    8000: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', // Dev
+    8080: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', // Alt Web
+    3389: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300', // RDP
+    21: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', // FTP
+  }
+  return map[port] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
 }
 
 let pollInterval = null

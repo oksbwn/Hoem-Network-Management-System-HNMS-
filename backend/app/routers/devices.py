@@ -10,7 +10,7 @@ def _internal_list_devices(device_type: str | None = None, online_only: bool = F
     try:
         base_sql = """
             SELECT id, ip, mac, name, display_name, device_type,
-                   first_seen, last_seen, vendor, icon, attributes
+                   first_seen, last_seen, vendor, icon, open_ports, attributes
             FROM devices
         """
         clauses: list[str] = []
@@ -24,9 +24,6 @@ def _internal_list_devices(device_type: str | None = None, online_only: bool = F
             base_sql += " WHERE " + " AND ".join(clauses)
         base_sql += " ORDER BY ip"
     
-        print(f"DEBUG: _internal_list_devices called with device_type={device_type} (type={type(device_type)})")
-        print(f"DEBUG: params={params}")
-        
         rows = conn.execute(base_sql, params).fetchall()
         return [
             DeviceRead(
@@ -40,7 +37,8 @@ def _internal_list_devices(device_type: str | None = None, online_only: bool = F
                 last_seen=r[7],
                 vendor=r[8],
                 icon=r[9],
-                attributes=r[10],
+                open_ports=r[10],
+                attributes=r[11],
             )
             for r in rows
         ]
@@ -61,7 +59,7 @@ def get_device(device_id: str):
         row = conn.execute(
             """
             SELECT id, ip, mac, name, display_name, device_type,
-                   first_seen, last_seen, vendor, icon, attributes
+                   first_seen, last_seen, vendor, icon, open_ports, attributes
             FROM devices
             WHERE id = ?
             """,
@@ -80,7 +78,8 @@ def get_device(device_id: str):
             last_seen=row[7],
             vendor=row[8],
             icon=row[9],
-            attributes=row[10],
+            open_ports=row[10],
+            attributes=row[11],
         )
     finally:
         conn.close()

@@ -71,10 +71,11 @@ async def upsert_device_from_scan(
                     mac = COALESCE(?, mac),
                     name = COALESCE(name, ?),
                     device_type = COALESCE(device_type, ?),
-                    icon = COALESCE(icon, ?)
+                    icon = COALESCE(icon, ?),
+                    open_ports = ?
                 WHERE id = ?
                 """,
-                [now, ip, mac, hostname, guessed_type, guessed_icon, device_id]
+                [now, ip, mac, hostname, guessed_type, guessed_icon, json.dumps(ports), device_id]
             )
         else:
             is_new = True
@@ -87,10 +88,10 @@ async def upsert_device_from_scan(
 
             conn.execute(
                 """
-                INSERT INTO devices (id, ip, mac, name, display_name, device_type, icon, first_seen, last_seen, attributes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO devices (id, ip, mac, name, display_name, device_type, icon, open_ports, first_seen, last_seen, attributes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                [device_id, ip, mac, hostname, hostname or ip, guessed_type, guessed_icon, now, now, "{}"]
+                [device_id, ip, mac, hostname, hostname or ip, guessed_type, guessed_icon, json.dumps(ports), now, now, "{}"]
             )
 
         conn.execute("DELETE FROM device_ports WHERE device_id = ?", [device_id])

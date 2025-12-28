@@ -54,3 +54,7 @@ def migrate_db(conn: duckdb.DuckDBPyConnection) -> None:
     if 'icon' not in col_names:
         print("Migration: Adding 'icon' column to 'devices'")
         conn.execute("ALTER TABLE devices ADD COLUMN icon TEXT")
+
+    if 'open_ports' not in col_names:
+        print("Migration: Adding 'open_ports' column to 'devices'")
+        conn.execute("ALTER TABLE devices ADD COLUMN open_ports TEXT")

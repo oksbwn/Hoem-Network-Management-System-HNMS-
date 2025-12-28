@@ -9,6 +9,29 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from app.core.db import get_connection
 
+COMMON_PORTS = {
+    21: "FTP",
+    22: "SSH",
+    23: "Telnet",
+    25: "SMTP",
+    53: "DNS",
+    80: "HTTP",
+    111: "RPCBind",
+    139: "NetBIOS",
+    443: "HTTPS",
+    445: "SMB",
+    1883: "MQTT",
+    3000: "React/Vite",
+    3306: "MySQL",
+    3389: "RDP",
+    5000: "API/Flask",
+    5432: "PostgreSQL",
+    8000: "Web",
+    8001: "Scanner API",
+    8080: "HTTP-Alt",
+    8883: "MQTT/S",
+}
+
 async def resolve_hostname(ip: str) -> Optional[str]:
     """Tries to resolve IP to hostname."""
     try:
@@ -55,6 +78,30 @@ def get_arp_table() -> dict[str, str]:
     except Exception as e:
         print(f"DEBUG ERROR: Failed to read ARP table: {e}")
     return arp_map
+
+async def check_port(ip: str, port: int, timeout: float = 1.0) -> Optional[Dict[str, Any]]:
+    """Checks if a TCP port is open."""
+    try:
+        conn = asyncio.open_connection(ip, port)
+        _, writer = await asyncio.wait_for(conn, timeout=timeout)
+        writer.close()
+        await writer.wait_closed()
+        return {
+            "port": port,
+            "protocol": "TCP",
+            "service": COMMON_PORTS.get(port, "Unknown")
+        }
+    except:
+        return None
+
+async def scan_ports(ip: str, ports: List[int] = None) -> List[Dict[str, Any]]:
+    """Scans a list of ports on a given IP and returns detailed records."""
+    if not ports:
+        ports = list(COMMON_PORTS.keys())
+    
+    tasks = [check_port(ip, port) for port in ports]
+    results = await asyncio.gather(*tasks)
+    return [p for p in results if p is not None]
 
 async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
     conn = get_connection()
@@ -124,9 +171,9 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
             ip = device["ip"]
             mac = device["mac"]
             
-            # 4. Resolve Hostname
+            # 4. Resolve Hostname & Trace Ports
             hostname = await resolve_hostname(ip)
-            ports_list = [] # Port mapping can be added here later if needed
+            ports_list = await scan_ports(ip)
 
             result_id = str(uuid4())
             conn.execute(
@@ -137,6 +184,16 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str) -> None:
                 """,
                 [result_id, scan_id, ip, mac, hostname, json.dumps(ports_list), None, now, now]
             )
+
+            # 5. Persist Open Ports to separate table for long-term tracking
+            for p in ports_list:
+                conn.execute(
+                    """
+                    INSERT INTO device_ports (device_id, port, protocol, service, last_seen)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    [mac or ip, p["port"], p["protocol"], p["service"], now]
+                )
 
             # upsert device
             from app.services.devices import upsert_device_from_scan

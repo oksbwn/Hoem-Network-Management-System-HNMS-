@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS devices (
     internet_path TEXT,
     vendor        TEXT,
     icon          TEXT,
+    open_ports    TEXT,
     attributes    TEXT
 );
 

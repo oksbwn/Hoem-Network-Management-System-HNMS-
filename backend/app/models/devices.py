@@ -13,6 +13,7 @@ class DeviceRead(BaseModel):
     last_seen: Optional[datetime] = None
     vendor: Optional[str] = None
     icon: Optional[str] = None
+    open_ports: Optional[str] = "[]"
     attributes: Optional[str] = "{}"
 
 class DeviceUpdate(BaseModel):

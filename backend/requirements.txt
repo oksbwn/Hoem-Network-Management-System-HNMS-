@@ -11,4 +11,5 @@ scapy
 python-dotenv
 paho-mqtt
 httpx
+paramiko
 

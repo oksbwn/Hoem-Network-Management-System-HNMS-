@@ -59,6 +59,10 @@ HNMS is designed to give you total visibility over your local network. It combin
 ![Device List](./.img/devices.png)
 *Granular control over your network inventory with vendor-specific metadata.*
 
+### Integrated SSH Terminal
+![SSH Terminal](./.img/ssh-terminal.png)
+*Direct, secure web-based shell access to your network devices.*
+
 ### High-Fidelity Analytics
 ![Device Identification](./.img/device-details.png)
 *Sub-second precision on device availability and deep port audit history.*
@@ -85,6 +89,8 @@ HNMS acts as a bridge between your network and your smart home.
 
 > [!TIP]
 > Use the **Home Assistant Discovery** feature to instantly see network presence as binary sensors in your HA Dashboard.
+
+![Home Assistant Discovery](./.img/home-assistant.png)
 
 | Topic Pattern | Description |
 | :--- | :--- |

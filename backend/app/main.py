@@ -1,5 +1,9 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 import asyncio
+import logging
 from app.core.db import init_db
 from app.routers.config import router as config_router
 from app.routers.scans import router as scans_router
@@ -9,12 +13,13 @@ from app.services.worker import scheduler_loop, scan_runner_loop
 from app.routers.ssh import router as ssh_router
 from app.routers.events import router as events_router
 
+logger = logging.getLogger(__name__)
 app = FastAPI(title="Network Scanner API")
 
 def cleanup_stale_scans():
     from app.core.db import get_connection
     from datetime import datetime, timezone
-    print("DEBUG: Cleaning up stale scans from previous run...")
+    logger.info("Cleaning up stale scans from previous run...")
     conn = get_connection()
     try:
         # Mark running or queued scans as interrupted on startup
@@ -22,15 +27,16 @@ def cleanup_stale_scans():
             "UPDATE scans SET status = 'interrupted', finished_at = ?, error_message = 'Interrupted by server restart' WHERE status IN ('running', 'queued')",
             [datetime.now(timezone.utc)]
         )
+        conn.commit()
     except Exception as e:
-        print(f"DEBUG ERROR during startup cleanup: {e}")
+        logger.error(f"Error during startup cleanup: {e}")
     finally:
         conn.close()
 
 @app.on_event("startup")
 async def on_startup():
-    cleanup_stale_scans()
-    init_db()
+    await asyncio.to_thread(cleanup_stale_scans)
+    await asyncio.to_thread(init_db)
     from app.services.oui_downloader import ensure_oui_data
     asyncio.create_task(ensure_oui_data())
     asyncio.create_task(scheduler_loop())
@@ -42,5 +48,18 @@ app.include_router(devices_router, prefix="/api/v1/devices", tags=["devices"])
 app.include_router(schedules_router, prefix="/api/v1/schedules", tags=["schedules"])
 app.include_router(ssh_router, prefix="/api/v1/ssh", tags=["ssh"])
 app.include_router(events_router, prefix="/api/v1/events", tags=["events"])
-# Force Reload
-# Trigger Migration
+
+# SPA Static File Serving
+static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static")
+
+if os.path.exists(static_dir):
+    app.mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="assets")
+    
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        file_path = os.path.join(static_dir, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(static_dir, "index.html"))
+else:
+    logger.warning(f"Static directory not found at {static_dir}. UI will not be served.")

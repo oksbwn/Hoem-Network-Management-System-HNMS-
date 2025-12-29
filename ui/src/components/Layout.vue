@@ -32,7 +32,7 @@
       <div class="p-2 border-t border-slate-200 dark:border-slate-700 space-y-2">
         <div v-if="!sidebarCollapsed"
           class="text-[10px] uppercase font-bold tracking-widest text-slate-400 dark:text-slate-600 text-center py-2">
-          v0.3.0
+          {{ version }}
         </div>
         <button @click="sidebarCollapsed = !sidebarCollapsed"
           class="w-full flex items-center p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-all duration-300"
@@ -105,6 +105,7 @@ import {
 
 const sidebarCollapsed = ref(true)
 const mobileMenuOpen = ref(false)
+const version = import.meta.env.VITE_APP_VERSION || 'v0.3.1'
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: HomeIcon },

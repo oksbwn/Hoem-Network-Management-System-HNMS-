@@ -1,2 +1,11 @@
-backend/.venv/*
-ui/node_modules/*
+backend/.venv/
+ui/node_modules/
+ui/dist/
+data/
+*.duckdb
+*.duckdb.wal
+backend/.env
+scans_output.json
+.vscode/
+__pycache__/
+*.pyc

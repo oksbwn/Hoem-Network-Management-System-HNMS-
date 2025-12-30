@@ -78,3 +78,17 @@ CREATE TABLE IF NOT EXISTS scan_schedules (
     last_run_at      TIMESTAMP,
     next_run_at      TIMESTAMP
 );
+
+-- classification_rules
+CREATE TABLE IF NOT EXISTS classification_rules (
+    id               TEXT PRIMARY KEY,
+    name             TEXT NOT NULL,
+    pattern_hostname TEXT,
+    pattern_vendor   TEXT,
+    ports            TEXT, -- Store as JSON array string
+    device_type      TEXT NOT NULL,
+    icon             TEXT NOT NULL,
+    priority         INTEGER NOT NULL DEFAULT 100,
+    is_builtin       BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

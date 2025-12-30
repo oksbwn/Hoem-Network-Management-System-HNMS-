@@ -272,6 +272,39 @@
               <div v-else class="text-sm text-slate-500 italic">No metrics available</div>
             </div>
 
+            <!-- Port Lookup Engine -->
+            <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
+                  <Search class="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 class="text-base font-semibold text-slate-900 dark:text-white">Port Lookup</h2>
+                  <p class="text-xs text-slate-500">Device identification engine</p>
+                </div>
+              </div>
+
+              <div class="space-y-3 mb-4">
+                <div
+                  class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-700/50">
+                  <span class="text-xs text-slate-500">Active Rules</span>
+                  <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ rules.length }}</span>
+                </div>
+                <div
+                  class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-700/50">
+                  <span class="text-xs text-slate-500">Engine Type</span>
+                  <span
+                    class="text-xs px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full font-medium uppercase tracking-wider">Dynamic</span>
+                </div>
+              </div>
+
+              <button @click="openRulesModal"
+                class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm">
+                <Settings2 class="w-4 h-4" />
+                <span>Manage Lookup Rules</span>
+              </button>
+            </div>
+
             <!-- System Maintenance -->
             <div class="bg-white dark:bg-slate-800 rounded-lg border border-red-200 dark:border-red-900/20 p-4">
               <h3 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">System Maintenance</h3>
@@ -333,13 +366,192 @@
         </div>
       </div>
     </div>
+    <!-- Classification Rules Modal -->
+    <div v-if="isRulesModalOpen" class="fixed inset-0 z-50 overflow-y-auto" @click.self="isRulesModalOpen = false">
+      <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+          @click="isRulesModalOpen = false"></div>
+        <div
+          class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-700">
+          <!-- Header -->
+          <div
+            class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/20">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
+                <Fingerprint class="w-5 h-5" />
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Port Lookup Rules</h3>
+                <p class="text-xs text-slate-500">Define how devices are identified via port probing</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button @click="openAddRule"
+                class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-all">
+                <Plus class="w-4 h-4" />
+                Add New Rule
+              </button>
+              <button @click="isRulesModalOpen = false"
+                class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                <X class="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <!-- List -->
+          <div class="flex-1 overflow-auto p-6 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
+            <div v-if="rulesLoading" class="flex flex-col items-center justify-center py-12 gap-4">
+              <Loader2 class="w-8 h-8 animate-spin text-indigo-500" />
+              <p class="text-sm text-slate-500 animate-pulse font-medium">Loading rules engine...</p>
+            </div>
+            <div v-else-if="rules.length === 0" class="text-center py-12">
+              <div class="inline-flex p-4 bg-slate-50 dark:bg-slate-900/50 rounded-full mb-4">
+                <Search class="w-8 h-8 text-slate-300 dark:text-slate-600" />
+              </div>
+              <h4 class="text-slate-900 dark:text-white font-semibold">No rules found</h4>
+              <p class="text-sm text-slate-500 max-w-xs mx-auto mt-1">Start by adding a classification rule to better
+                identify devices on your network.</p>
+            </div>
+            <div v-else class="space-y-4">
+              <div v-for="rule in rules" :key="rule.id"
+                class="group bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 p-4 transition-all hover:border-indigo-500/50 hover:shadow-md">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex items-center gap-4">
+                    <div
+                      class="p-3 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400">
+                      <component :is="getIconComponent(rule.icon)" class="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2 mb-1">
+                        <h4 class="font-bold text-slate-900 dark:text-white">{{ rule.name }}</h4>
+                        <span v-if="rule.is_builtin"
+                          class="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-400 rounded uppercase tracking-tighter">System</span>
+                        <span
+                          class="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 rounded uppercase tracking-tighter">Prio:
+                          {{ rule.priority }}</span>
+                      </div>
+                      <div class="flex flex-wrap gap-2">
+                        <span v-if="rule.pattern_hostname"
+                          class="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded text-[10px] font-medium border border-blue-100/50 dark:border-blue-900/30">Host:
+                          {{ rule.pattern_hostname }}</span>
+                        <span v-if="rule.pattern_vendor"
+                          class="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded text-[10px] font-medium border border-purple-100/50 dark:border-purple-900/30">Vendor:
+                          {{ rule.pattern_vendor }}</span>
+                        <span v-if="rule.ports && rule.ports.length"
+                          class="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded text-[10px] font-medium border border-amber-100/50 dark:border-amber-900/30">Ports:
+                          {{ rule.ports.join(', ') }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 self-start">
+                    <button @click="editRule(rule)"
+                      class="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all"
+                      v-tooltip="'Edit Rule'">
+                      <Pencil class="w-4 h-4" />
+                    </button>
+                    <button v-if="!rule.is_builtin" @click="deleteRule(rule.id)"
+                      class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                      v-tooltip="'Delete Rule'">
+                      <Trash class="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rule Form Modal -->
+    <div v-if="isRuleFormOpen" class="fixed inset-0 z-[60] overflow-y-auto" @click.self="isRuleFormOpen = false">
+      <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="isRuleFormOpen = false">
+        </div>
+        <div
+          class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white">{{ editingRule ? 'Edit' : 'Create' }}
+              Classification Rule</h3>
+            <button @click="isRuleFormOpen = false" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Rule Name</label>
+              <input v-model="ruleForm.name" type="text" placeholder="e.g. My Custom Router"
+                class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Device Type</label>
+                <select v-model="ruleForm.device_type"
+                  class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white outline-none">
+                  <option v-for="type in deviceTypes" :key="type" :value="type">{{ type }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Priority</label>
+                <input v-model.number="ruleForm.priority" type="number"
+                  class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Hostname Pattern
+                (Regex)</label>
+              <input v-model="ruleForm.pattern_hostname" type="text" placeholder="e.g. asus-.*"
+                class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Vendor Pattern
+                (Regex)</label>
+              <input v-model="ruleForm.pattern_vendor" type="text" placeholder="e.g. huawei|zte"
+                class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Ports (Comma
+                separated)</label>
+              <input v-model="portInput" type="text" placeholder="e.g. 80, 443, 8080"
+                class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Select Icon</label>
+              <div
+                class="grid grid-cols-6 gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 max-h-40 overflow-auto">
+                <button v-for="icon in availableIcons" :key="icon" @click="ruleForm.icon = icon"
+                  class="p-2 rounded-lg transition-all flex items-center justify-center border border-transparent"
+                  :class="ruleForm.icon === icon ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800' : 'hover:bg-white dark:hover:bg-slate-800 text-slate-400 dark:text-slate-600'">
+                  <component :is="getIconComponent(icon)" class="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div class="flex gap-3 pt-4">
+              <button @click="isRuleFormOpen = false"
+                class="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+              <button @click="saveRule"
+                class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-lg transition-all">Save
+                Rule</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import axios from 'axios'
-import { Save, RotateCcw, Trash2, AlertTriangle, Loader2, Plus } from 'lucide-vue-next'
+import * as LucideIcons from 'lucide-vue-next'
+import { Save, RotateCcw, Trash2, AlertTriangle, Loader2, Plus, Fingerprint, Pencil, Trash, X, Check, Search, ShieldCheck, Tag, Settings2, Layout, ChevronDown } from 'lucide-vue-next'
 import { useNotifications } from '@/composables/useNotifications'
 
 const settings = reactive({
@@ -362,6 +574,48 @@ const loading = ref(false)
 const testLoading = ref(false)
 const mqttStatus = ref(null)
 const subnetError = ref('')
+
+// Classification Rules State
+const rules = ref([])
+const rulesLoading = ref(false)
+const isRulesModalOpen = ref(false)
+const editingRule = ref(null)
+const isRuleFormOpen = ref(false)
+
+const emptyRule = {
+  name: '',
+  pattern_hostname: '',
+  pattern_vendor: '',
+  ports: [],
+  device_type: 'Generic',
+  icon: 'help-circle',
+  priority: 100
+}
+const ruleForm = reactive({ ...emptyRule })
+const portInput = ref('')
+
+const deviceTypes = [
+  'Smartphone', 'Tablet', 'Laptop', 'Desktop', 'Server',
+  'Router/Gateway', 'Network Bridge', 'Switch', 'Access Point',
+  'TV/Entertainment', 'IoT Device', 'Smart Bulb', 'Smart Plug/Switch',
+  'Microcontroller', 'Security Camera', 'Sensor', 'Audio/Speaker',
+  'Streaming Device', 'Printer', 'NAS/Storage', 'Game Console',
+  'Media Server', 'Home Automation', 'Server Admin', 'Generic'
+]
+
+const availableIcons = [
+  'smartphone', 'tablet', 'laptop', 'monitor', 'server', 'router', 'network',
+  'layers', 'rss', 'tv', 'cpu', 'lightbulb', 'plug', 'microchip', 'camera',
+  'waves', 'speaker', 'play', 'printer', 'hard-drive', 'gamepad-2',
+  'play-circle', 'home', 'settings', 'shield-check', 'help-circle'
+]
+
+const getIconComponent = (name) => {
+  if (!name) return LucideIcons.HelpCircle
+  // Convert kebab to PascalCase (e.g., 'play-circle' -> 'PlayCircle')
+  const camel = name.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
+  return LucideIcons[camel] || LucideIcons[name] || LucideIcons.HelpCircle
+}
 
 const { notifySuccess, notifyError } = useNotifications()
 
@@ -427,6 +681,70 @@ const fetchSettings = async () => {
     if (mapping.mqtt_password) settings.mqtt_password = mapping.mqtt_password
   } catch (e) {
     console.error("Failed to fetch config:", e)
+  }
+}
+
+const fetchRules = async () => {
+  rulesLoading.value = true
+  try {
+    const res = await axios.get('/api/v1/classification/')
+    rules.value = res.data
+  } catch (e) {
+    notifyError('Failed to fetch classification rules')
+  } finally {
+    rulesLoading.value = false
+  }
+}
+
+const openRulesModal = () => {
+  fetchRules()
+  isRulesModalOpen.value = true
+}
+
+const openAddRule = () => {
+  Object.assign(ruleForm, emptyRule)
+  portInput.value = ''
+  editingRule.value = null
+  isRuleFormOpen.value = true
+}
+
+const editRule = (rule) => {
+  Object.assign(ruleForm, rule)
+  portInput.value = rule.ports.join(', ')
+  editingRule.value = rule.id
+  isRuleFormOpen.value = true
+}
+
+const saveRule = async () => {
+  try {
+    // Parse ports
+    const ports = portInput.value.split(',')
+      .map(p => parseInt(p.trim()))
+      .filter(p => !isNaN(p))
+    ruleForm.ports = ports
+
+    if (editingRule.value) {
+      await axios.put(`/api/v1/classification/${editingRule.value}`, ruleForm)
+      notifySuccess('Rule updated successfully')
+    } else {
+      await axios.post('/api/v1/classification/', ruleForm)
+      notifySuccess('Rule created successfully')
+    }
+    isRuleFormOpen.value = false
+    fetchRules()
+  } catch (e) {
+    notifyError(e.response?.data?.detail || 'Failed to save rule')
+  }
+}
+
+const deleteRule = async (id) => {
+  if (!confirm('Are you sure you want to delete this rule?')) return
+  try {
+    await axios.delete(`/api/v1/classification/${id}`)
+    notifySuccess('Rule deleted successfully')
+    fetchRules()
+  } catch (e) {
+    notifyError(e.response?.data?.detail || 'Failed to delete rule')
   }
 }
 
@@ -560,5 +878,6 @@ onMounted(() => {
   fetchSettings()
   fetchGist()
   fetchMqttStatus()
+  fetchRules()
 })
 </script>

@@ -1,0 +1,251 @@
+[
+    {
+        "name": "Home Assistant",
+        "pattern_hostname": "hass|homeassistant",
+        "pattern_vendor": null,
+        "ports": [
+            8123
+        ],
+        "device_type": "Home Automation",
+        "icon": "home",
+        "priority": 10
+    },
+    {
+        "name": "Proxmox VE",
+        "pattern_hostname": "proxmox|pve",
+        "pattern_vendor": null,
+        "ports": [
+            8006
+        ],
+        "device_type": "Server Admin",
+        "icon": "settings",
+        "priority": 10
+    },
+    {
+        "name": "Pi-hole",
+        "pattern_hostname": "pihole|pi.hole",
+        "pattern_vendor": null,
+        "ports": [
+            53,
+            80
+        ],
+        "device_type": "Server Admin",
+        "icon": "shield-check",
+        "priority": 15
+    },
+    {
+        "name": "AdGuard Home",
+        "pattern_hostname": "adguard",
+        "pattern_vendor": null,
+        "ports": [
+            3000,
+            80,
+            443
+        ],
+        "device_type": "Server Admin",
+        "icon": "shield-check",
+        "priority": 15
+    },
+    {
+        "name": "Synology NAS",
+        "pattern_hostname": "synology|nas",
+        "pattern_vendor": "synology",
+        "ports": [
+            5000,
+            5001
+        ],
+        "device_type": "NAS/Storage",
+        "icon": "hard-drive",
+        "priority": 20
+    },
+    {
+        "name": "TrueNAS/Unraid",
+        "pattern_hostname": "truenas|unraid",
+        "pattern_vendor": null,
+        "ports": [
+            80,
+            443,
+            445
+        ],
+        "device_type": "NAS/Storage",
+        "icon": "hard-drive",
+        "priority": 20
+    },
+    {
+        "name": "Plex Media Server",
+        "pattern_hostname": "plex",
+        "pattern_vendor": null,
+        "ports": [
+            32400
+        ],
+        "device_type": "Media Server",
+        "icon": "play-circle",
+        "priority": 25
+    },
+    {
+        "name": "Jellyfin",
+        "pattern_hostname": "jellyfin",
+        "pattern_vendor": null,
+        "ports": [
+            8096
+        ],
+        "device_type": "Media Server",
+        "icon": "play-circle",
+        "priority": 25
+    },
+    {
+        "name": "Sonos Speaker",
+        "pattern_hostname": "sonos",
+        "pattern_vendor": "sonos",
+        "ports": [
+            1400,
+            1443
+        ],
+        "device_type": "Audio/Speaker",
+        "icon": "speaker",
+        "priority": 30
+    },
+    {
+        "name": "Roku Device",
+        "pattern_hostname": "roku",
+        "pattern_vendor": "roku",
+        "ports": [
+            8060
+        ],
+        "device_type": "Streaming Device",
+        "icon": "play",
+        "priority": 30
+    },
+    {
+        "name": "Nvidia Shield",
+        "pattern_hostname": "shield",
+        "pattern_vendor": "nvidia",
+        "ports": [
+            8008,
+            8009
+        ],
+        "device_type": "Streaming Device",
+        "icon": "play",
+        "priority": 30
+    },
+    {
+        "name": "Apple TV",
+        "pattern_hostname": "apple-tv",
+        "pattern_vendor": "apple",
+        "ports": [
+            3689
+        ],
+        "device_type": "Streaming Device",
+        "icon": "tv",
+        "priority": 30
+    },
+    {
+        "name": "UniFi Infrastructure",
+        "pattern_hostname": "unifi|ubnt",
+        "pattern_vendor": "ubiquiti",
+        "ports": [
+            8080,
+            8443,
+            10001
+        ],
+        "device_type": "Router/Gateway",
+        "icon": "rss",
+        "priority": 35
+    },
+    {
+        "name": "MikroTik Router",
+        "pattern_hostname": "mikrotik",
+        "pattern_vendor": "mikrotik",
+        "ports": [
+            8291,
+            8728
+        ],
+        "device_type": "Router/Gateway",
+        "icon": "router",
+        "priority": 35
+    },
+    {
+        "name": "PlayStation",
+        "pattern_hostname": "playstation|ps4|ps5",
+        "pattern_vendor": "sony",
+        "ports": [
+            9295,
+            987
+        ],
+        "device_type": "Game Console",
+        "icon": "gamepad-2",
+        "priority": 40
+    },
+    {
+        "name": "Xbox",
+        "pattern_hostname": "xbox",
+        "pattern_vendor": "microsoft",
+        "ports": [
+            5050
+        ],
+        "device_type": "Game Console",
+        "icon": "gamepad-2",
+        "priority": 40
+    },
+    {
+        "name": "Nintendo Switch",
+        "pattern_hostname": "nintendo|switch",
+        "pattern_vendor": "nintendo",
+        "ports": [],
+        "device_type": "Game Console",
+        "icon": "gamepad-2",
+        "priority": 40
+    },
+    {
+        "name": "IP Camera",
+        "pattern_hostname": "camera|cam-|ipc",
+        "pattern_vendor": "hikvision|dahua|reolink|amcrest|ezviz",
+        "ports": [
+            554,
+            8000,
+            8080
+        ],
+        "device_type": "Security Camera",
+        "icon": "camera",
+        "priority": 45
+    },
+    {
+        "name": "Philips Hue Bridge",
+        "pattern_hostname": "hue-bridge",
+        "pattern_vendor": "philips",
+        "ports": [
+            80,
+            443
+        ],
+        "device_type": "IoT Device",
+        "icon": "lightbulb",
+        "priority": 50
+    },
+    {
+        "name": "Shelly Device",
+        "pattern_hostname": "shelly",
+        "pattern_vendor": "shelly",
+        "ports": [
+            80,
+            8081,
+            1883
+        ],
+        "device_type": "Smart Plug/Switch",
+        "icon": "plug",
+        "priority": 50
+    },
+    {
+        "name": "ESPHome/IOT",
+        "pattern_hostname": "esphome|esp32|esp8266|nodemcu|tasmota|sonoff|tuya",
+        "pattern_vendor": "espressif",
+        "ports": [
+            6053,
+            1883,
+            8883,
+            5683
+        ],
+        "device_type": "IoT Device",
+        "icon": "cpu",
+        "priority": 60
+    }
+]

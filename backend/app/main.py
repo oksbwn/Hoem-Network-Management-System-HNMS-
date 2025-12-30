@@ -38,8 +38,10 @@ def cleanup_stale_scans():
 async def on_startup():
     await asyncio.to_thread(cleanup_stale_scans)
     await asyncio.to_thread(init_db)
-    from app.services.oui_downloader import ensure_oui_data
-    asyncio.create_task(ensure_oui_data())
+    
+    # OUI downloader was permanently removed due to high CPU usage on Raspberry Pi.
+    # Vendor identification now relies on hardcoded COMMON_OUIS and on-demand API enrichment.
+    
     asyncio.create_task(scheduler_loop())
     asyncio.create_task(scan_runner_loop())
     

@@ -78,10 +78,3 @@ CREATE TABLE IF NOT EXISTS scan_schedules (
     last_run_at      TIMESTAMP,
     next_run_at      TIMESTAMP
 );
-
--- mac_vendors (IEEE OUI cache)
-CREATE TABLE IF NOT EXISTS mac_vendors (
-    oui         TEXT PRIMARY KEY,
-    vendor      TEXT NOT NULL,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);

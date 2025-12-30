@@ -93,31 +93,13 @@ COMMON_OUIS = {
     "50:dc:e7": "Amazon Technologies",
 }
 
-def get_vendor_from_db(mac: str) -> Optional[str]:
-    """Queries the local mac_vendors table."""
-    if not mac or len(mac) < 8:
-        return None
-    prefix = mac.upper()[:8]
-    conn = get_connection()
-    try:
-        row = conn.execute("SELECT vendor FROM mac_vendors WHERE oui = ?", [prefix]).fetchone()
-        return row[0] if row else None
-    except:
-        return None
-    finally:
-        conn.close()
-
 def get_vendor_locally(mac: str) -> Optional[str]:
     if not mac or len(mac) < 8:
         return None
     prefix = mac.lower()[:8]
     
-    # Tier 0: Hardcoded fast list
-    hardcoded = COMMON_OUIS.get(prefix)
-    if hardcoded: return hardcoded
-    
-    # Tier 1: Local DuckDB table (full IEEE copy)
-    return get_vendor_from_db(mac)
+    # Fast local lookup from hardcoded list
+    return COMMON_OUIS.get(prefix)
 
 def classify_device(
     hostname: Optional[str], 

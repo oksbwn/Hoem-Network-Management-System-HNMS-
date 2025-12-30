@@ -213,15 +213,43 @@ async def trigger_device_scan(device_id: str):
 
 @router.delete("/queue")
 async def clear_scan_queue():
-    def sync_delete():
+    def sync_cancel_all():
         conn = get_connection()
         try:
-            conn.execute("DELETE FROM scans WHERE status = 'queued'")
+            conn.execute(
+                "UPDATE scans SET status = 'interrupted', finished_at = ?, error_message = 'Batch canceled' WHERE status = 'queued'",
+                [datetime.now(timezone.utc)]
+            )
             conn.commit()
         finally:
             conn.close()
-    await asyncio.to_thread(sync_delete)
-    return {"status": "success", "message": "Queued scans cleared"}
+    await asyncio.to_thread(sync_cancel_all)
+    return {"status": "success", "message": "All queued scans marked as cancelled"}
+
+@router.delete("/{scan_id}")
+async def cancel_scan(scan_id: str):
+    def sync_cancel():
+        conn = get_connection()
+        try:
+            # Check status
+            row = conn.execute("SELECT status FROM scans WHERE id = ?", [scan_id]).fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Scan not found")
+            
+            # User wants to mark as cancelled, never delete.
+            # Only allowed for queued or running scans.
+            if row[0] in ('running', 'queued'):
+                conn.execute(
+                    "UPDATE scans SET status = 'interrupted', finished_at = ?, error_message = 'Canceled by user' WHERE id = ?", 
+                    [datetime.now(timezone.utc), scan_id]
+                )
+                conn.commit()
+                return {"status": "success", "message": "Scan marked as cancelled"}
+            else:
+                raise HTTPException(status_code=400, detail="Finished scans cannot be modified")
+        finally:
+            conn.close()
+    return await asyncio.to_thread(sync_cancel)
 
 @router.delete("/")
 async def clear_all_history():

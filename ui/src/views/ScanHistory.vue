@@ -7,6 +7,11 @@
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Discovery activity log</p>
       </div>
       <div class="flex items-center gap-2">
+        <button @click="runDiscovery" :disabled="isScanning"
+          class="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400"
+          v-tooltip="'Start Network Discovery'">
+          <component :is="isScanning ? RefreshCw : Search" class="w-5 h-5" :class="{ 'animate-spin': isScanning }" />
+        </button>
         <button @click="clearQueue"
           class="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
           v-tooltip="'Clear Scan Queue'">
@@ -53,16 +58,6 @@
       </div>
     </div>
 
-    <!-- Error Alert -->
-    <div v-if="errorMessage"
-      class="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg border border-red-200 dark:border-red-900/30 text-sm flex items-center gap-3">
-      <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd"
-          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-          clip-rule="evenodd" />
-      </svg>
-      <span>{{ errorMessage }}</span>
-    </div>
 
     <!-- Scans Table -->
     <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -114,11 +109,18 @@
                     undefined ? resultsCount[scan.id] : '...' }}</span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                  <button @click="toggleExpand(scan.id)"
-                    class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all"
-                    v-tooltip="expandedIds.has(scan.id) ? 'Collapse Details' : 'View Details'">
-                    <component :is="expandedIds.has(scan.id) ? ChevronUp : ChevronDown" class="w-4 h-4" />
-                  </button>
+                  <div class="flex items-center justify-end gap-1">
+                    <button v-if="['queued', 'running'].includes(scan.status)" @click="cancelScan(scan.id)"
+                      class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                      v-tooltip="'Cancel Scan'">
+                      <X class="w-4 h-4" />
+                    </button>
+                    <button @click="toggleExpand(scan.id)"
+                      class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all"
+                      v-tooltip="expandedIds.has(scan.id) ? 'Collapse Details' : 'View Details'">
+                      <component :is="expandedIds.has(scan.id) ? ChevronUp : ChevronDown" class="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
               <!-- Expanded Area -->
@@ -169,18 +171,59 @@
       </button>
     </div>
   </div>
+
+  <!-- Confirmation Modal -->
+  <div v-if="confirmModal.isOpen" class="fixed inset-0 z-50 overflow-y-auto" @click.self="closeConfirmation">
+    <div class="flex min-h-screen items-center justify-center p-4">
+      <!-- Backdrop -->
+      <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="closeConfirmation"></div>
+
+      <!-- Modal Card -->
+      <div
+        class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-700 transform transition-all scale-100 opacity-100">
+        <div class="flex flex-col items-center text-center">
+          <div class="h-12 w-12 rounded-full flex items-center justify-center mb-4"
+            :class="confirmModal.type === 'delete' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'">
+            <component :is="confirmModal.type === 'delete' ? Trash2 : AlertTriangle" class="h-6 w-6"
+              :class="confirmModal.type === 'delete' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'" />
+          </div>
+
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">{{ confirmModal.title }}</h3>
+
+          <p class="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+            {{ confirmModal.message }}
+          </p>
+
+          <div class="flex flex-col sm:flex-row gap-2 w-full">
+            <button @click="confirmAction"
+              class="flex-1 px-4 py-2.5 text-white rounded-lg text-sm font-bold shadow-lg transition-all active:scale-95"
+              :class="confirmModal.confirmClass">
+              {{ confirmModal.confirmText }}
+            </button>
+            <button @click="closeConfirmation"
+              class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-all active:scale-95">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
 import axios from 'axios'
 import Sparkline from '@/components/Sparkline.vue'
-import { Trash2, RefreshCw, CheckCircle, AlertTriangle, Clock, ChevronDown, ChevronUp, Activity, Smartphone, Server as ServerIcon } from 'lucide-vue-next'
+import { Trash2, RefreshCw, CheckCircle, AlertTriangle, Clock, ChevronDown, ChevronUp, Activity, Smartphone, Server as ServerIcon, Scan, X, Search } from 'lucide-vue-next'
 import { formatDate, formatRelativeTime } from '@/utils/date'
+import { useNotifications } from '@/composables/useNotifications'
+
+const { notifySuccess, notifyError } = useNotifications()
 
 const scans = ref([])
-const errorMessage = ref('')
 const isRefreshing = ref(false)
+const isScanning = ref(false)
 const expandedIds = ref(new Set())
 const scanResults = reactive({})
 const loadingResults = reactive({})
@@ -188,24 +231,48 @@ const resultsCount = reactive({})
 const currentPage = ref(1)
 const totalPages = ref(1)
 const limit = ref(10)
+const pendingActionId = ref(null)
+
+// Confirmation Modal State
+const confirmModal = reactive({
+  isOpen: false,
+  type: '', // 'delete' or 'clear_queue'
+  title: '',
+  message: '',
+  confirmText: '',
+  confirmClass: ''
+})
+
+const runDiscovery = async () => {
+  if (isScanning.value) return
+  isScanning.value = true
+  try {
+    await axios.post('/api/v1/scans/discovery')
+    notifySuccess('Discovery scan enqueued')
+    await fetchScans()
+  } catch (e) {
+    notifyError('Failed to start discovery')
+  } finally {
+    isScanning.value = false
+  }
+}
 
 const fetchScans = async () => {
-  errorMessage.value = ''
   isRefreshing.value = true
   try {
     const res = await axios.get('/api/v1/scans/', {
       params: { page: currentPage.value, limit: limit.value }
     })
-    scans.value = res.data.items
-    totalPages.value = res.data.total_pages
-    currentPage.value = res.data.page
-    res.data.items.forEach(scan => {
+    scans.value = res.data.items || []
+    totalPages.value = res.data.total_pages || 1
+    currentPage.value = res.data.page || 1
+    scans.value.forEach(scan => {
       if (scan.status === 'done' && resultsCount[scan.id] === undefined) {
         fetchCount(scan.id)
       }
     })
   } catch (e) {
-    errorMessage.value = 'Failed to load scan history'
+    notifyError('Failed to load scan history')
   } finally {
     setTimeout(() => {
       isRefreshing.value = false
@@ -220,12 +287,63 @@ const changePage = (page) => {
 }
 
 const clearQueue = async () => {
-  if (!confirm('Clear all queued scans?')) return
+  openConfirmation('clear_queue')
+}
+
+const cancelScan = async (id) => {
+  // Direct action as it's less destructive than an actual delete
   try {
-    await axios.delete('/api/v1/scans/queue')
+    await axios.delete(`/api/v1/scans/${id}`)
+    await fetchScans()
+    notifySuccess('Scan canceled')
+  } catch (e) {
+    notifyError('Failed to cancel scan')
+  }
+}
+
+const deleteScan = async (id) => {
+  pendingActionId.value = id
+  openConfirmation('delete')
+}
+
+const openConfirmation = (type) => {
+  confirmModal.type = type
+  confirmModal.isOpen = true
+
+  if (type === 'delete') {
+    confirmModal.title = 'Cancel Scan?'
+    confirmModal.message = 'Are you sure you want to cancel this scan? It will be marked as interrupted in your history.'
+    confirmModal.confirmText = 'Yes, Cancel Scan'
+    confirmModal.confirmClass = 'bg-red-600 hover:bg-red-700 focus:ring-red-500 shadow-red-500/20'
+  } else if (type === 'clear_queue') {
+    confirmModal.title = 'Cancel Pending?'
+    confirmModal.message = 'This will mark all currently queued scans as cancelled.'
+    confirmModal.confirmText = 'Cancel All Queued'
+    confirmModal.confirmClass = 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500 shadow-orange-500/20'
+  }
+}
+
+const closeConfirmation = () => {
+  confirmModal.isOpen = false
+  pendingActionId.value = null
+}
+
+const confirmAction = async () => {
+  const type = confirmModal.type
+  const id = pendingActionId.value
+  closeConfirmation()
+
+  try {
+    if (type === 'delete') {
+      await axios.delete(`/api/v1/scans/${id}`)
+      notifySuccess('Record deleted')
+    } else if (type === 'clear_queue') {
+      await axios.delete('/api/v1/scans/queue')
+      notifySuccess('Queue cleared')
+    }
     await fetchScans()
   } catch (e) {
-    errorMessage.value = 'Failed to clear queue'
+    notifyError(`Action failed: ${e.message}`)
   }
 }
 
@@ -319,6 +437,7 @@ const getStatusIcon = (s) => {
     case 'done': return CheckCircle
     case 'running': return RefreshCw // Animated via class
     case 'queued': return Clock
+    case 'interrupted': return X
     case 'error': return AlertTriangle
     default: return Clock
   }
@@ -329,6 +448,7 @@ const statusClass = (s) => {
     case 'done': return 'text-emerald-500 dark:text-emerald-400'
     case 'running': return 'text-blue-500 dark:text-blue-400 animate-spin'
     case 'queued': return 'text-slate-400 dark:text-slate-500'
+    case 'interrupted': return 'text-orange-500 dark:text-orange-400'
     case 'error': return 'text-red-500 dark:text-red-400'
     default: return 'text-slate-400'
   }

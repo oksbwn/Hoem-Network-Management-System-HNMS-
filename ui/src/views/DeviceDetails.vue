@@ -276,7 +276,7 @@
 
           <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
             <div class="w-1.5 h-6 bg-blue-400 rounded-full"></div>
-            Audited Services
+            Port Lookup Results
           </h2>
 
           <div v-if="parsedPorts.length > 0" class="space-y-3 relative z-10">
@@ -377,78 +377,57 @@ const ExternalLink = LucideIcons.ExternalLink
 const ShieldAlert = LucideIcons.ShieldAlert
 
 const deviceTypes = [
-  'Desktop', 'Laptop', 'Mobile', 'Tablet', 'Server', 'Printer', 'Monitor',
-  'Router', 'Switch', 'Access Point', 'Gateway', 'Firewall', 'NAS',
-  'Smart Plug', 'Smart Bulb', 'Smart Switch', 'Thermostat', 'Camera', 'Door Lock', 'Sensor',
-  'TV', 'Speaker', 'Game Console', 'Media Player', 'Wearable', 'Vehicle',
-  'IoT (Generic)', 'Unknown'
+  'Smartphone', 'Tablet', 'Laptop', 'Desktop', 'Server',
+  'Router/Gateway', 'Network Bridge', 'Switch', 'Access Point',
+  'TV/Entertainment', 'IoT Device', 'Smart Bulb', 'Smart Plug/Switch',
+  'Microcontroller', 'Security Camera', 'Sensor', 'Audio/Speaker',
+  'Streaming Device', 'Printer', 'NAS/Storage', 'Game Console',
+  'Media Server', 'Home Automation', 'Server Admin', 'Generic'
 ]
 
 const availableIcons = [
-  'Monitor', 'Laptop', 'Smartphone', 'Tablet', 'Server', 'Printer',
-  'Wifi', 'Network', 'Globe', 'ShieldCheck', 'Database',
-  'Zap', 'Lightbulb', 'Sliders', 'Home', 'Video', 'Lock', 'Eye',
-  'Tv', 'Speaker', 'Gamepad2', 'Film', 'Watch', 'Truck',
-  'Cpu', 'HelpCircle'
+  'smartphone', 'tablet', 'laptop', 'monitor', 'server', 'router', 'network',
+  'layers', 'rss', 'tv', 'cpu', 'lightbulb', 'plug', 'microchip', 'camera',
+  'waves', 'speaker', 'play', 'printer', 'hard-drive', 'gamepad-2',
+  'play-circle', 'home', 'settings', 'shield-check', 'help-circle'
 ]
 
 const typeToIconMap = {
-  'Desktop': 'Monitor',
-  'Laptop': 'Laptop',
-  'Mobile': 'Smartphone',
-  'Tablet': 'Tablet',
-  'Server': 'Server',
-  'Printer': 'Printer',
-  'Monitor': 'Monitor',
-  'Router': 'Wifi',
-  'Access Point': 'Wifi',
-  'Gateway': 'Globe',
-  'Switch': 'Network',
-  'Firewall': 'ShieldCheck',
-  'NAS': 'Database',
-  'Smart Plug': 'Zap',
-  'Smart Bulb': 'Lightbulb',
-  'Smart Switch': 'Sliders',
-  'Thermostat': 'Home',
-  'Camera': 'Video',
-  'Door Lock': 'Lock',
-  'Sensor': 'Eye',
-  'TV': 'Tv',
-  'Speaker': 'Speaker',
-  'Game Console': 'Gamepad2',
-  'Media Player': 'Film',
-  'Wearable': 'Watch',
-  'Vehicle': 'Truck',
-  'IoT (Generic)': 'Cpu',
-  'Unknown': 'HelpCircle'
+  "Smartphone": "smartphone",
+  "Tablet": "tablet",
+  "Laptop": "laptop",
+  "Desktop": "monitor",
+  "Server": "server",
+  "Router/Gateway": "router",
+  "Network Bridge": "network",
+  "Switch": "layers",
+  "Access Point": "rss",
+  "TV/Entertainment": "tv",
+  "IoT Device": "cpu",
+  "Smart Bulb": "lightbulb",
+  "Smart Plug/Switch": "plug",
+  "Microcontroller": "microchip",
+  "Security Camera": "camera",
+  "Sensor": "waves",
+  "Audio/Speaker": "speaker",
+  "Streaming Device": "play",
+  "Printer": "printer",
+  "NAS/Storage": "hard-drive",
+  "Game Console": "gamepad-2",
+  "Media Server": "play-circle",
+  "Home Automation": "home",
+  "Server Admin": "settings",
+  "Generic": "help-circle",
+  "Unknown": "help-circle"
 }
 
 const getIconComponent = (name) => {
   if (!name) return LucideIcons.HelpCircle
-
   // Direct match
   if (LucideIcons[name]) return LucideIcons[name]
-
-  // Try PascalCase conversion if user has legacy data
+  // Convert kebab to PascalCase (e.g., 'play-circle' -> 'PlayCircle')
   const camel = name.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
-  if (LucideIcons[camel]) return LucideIcons[camel]
-
-  // Explicit legacy mappings
-  const legacyMap = {
-    'Router/Gateway': 'Wifi',
-    'Switch/Bridge': 'Layers',
-    'Desktop': 'Monitor',
-    'Laptop': 'Laptop',
-    'Mobile': 'Smartphone',
-    'IoT': 'Cpu',
-    'printer': 'Printer',
-    'camera': 'Camera',
-    'hard-drive': 'HardDrive',
-    'nas': 'HardDrive'
-  }
-  if (legacyMap[name]) return LucideIcons[legacyMap[name]] || LucideIcons.HelpCircle
-
-  return LucideIcons.HelpCircle
+  return LucideIcons[camel] || LucideIcons[name] || LucideIcons.HelpCircle
 }
 
 watch(() => form.device_type, (newType) => {
@@ -633,7 +612,6 @@ const parsedPorts = computed(() => {
   if (!device.value || !device.value.open_ports) return []
 
   let data = device.value.open_ports
-  // If it's a string, parse it. If it's already an array (from new backend), use it.
   if (typeof data === 'string') {
     try {
       data = JSON.parse(data)
@@ -643,12 +621,24 @@ const parsedPorts = computed(() => {
   }
 
   if (Array.isArray(data) && data.length > 0) {
+    let normalized = []
     if (typeof data[0] === 'number') {
       const commonMap = { 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 53: 'DNS', 80: 'HTTP', 443: 'HTTPS', 445: 'SMB', 3000: 'React', 8080: 'Web', 3306: 'MySQL', 5432: 'Postgres' }
-      return data.map(p => ({ port: p, service: commonMap[p] || 'Unknown', protocol: 'TCP' }))
+      normalized = data.map(p => ({ port: p, service: commonMap[p] || 'Unknown', protocol: 'tcp' }))
+    } else {
+      // Already loaded as objects {port, service, protocol}
+      // Normalize protocol and filter out exact duplicates
+      normalized = data.map(p => ({ ...p, protocol: (p.protocol || 'tcp').toLowerCase() }))
     }
-    // Already loaded as objects {port, service, protocol}
-    return data
+
+    // Strict de-duplication by port (since we only handle TCP for now)
+    const seen = new Set()
+    return normalized.filter(p => {
+      const key = `${p.port}-${p.protocol}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   }
   return []
 })

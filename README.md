@@ -111,7 +111,7 @@ HNMS acts as a bridge between your network and your smart home.
 
 ---
 
-## � Docker Image
+## 🐋 Docker Image
 
 The official HNMS Docker image is available on Docker Hub:
 
@@ -123,7 +123,41 @@ docker pull wglabz/hnms:latest
 
 ---
 
-## �🚀 Quick Start (Docker)
+## 🚀 Detailed Docker Setup
+
+### Prerequisites
+- **Docker** and **Docker Compose** installed.
+- **Linux Host**: Recommended for full Nmap/Scapy performance (`network_mode: host`).
+
+### Environment Variables
+
+Configure the container behavior using these variables:
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `APP_ENV` | `production` | Set to `development` for debug logging. |
+| `DB_PATH` | `/data/network_scanner.duckdb` | Path to the database file inside the container. |
+| `DB_SCHEMA_PATH` | `app/schema.sql` | Path to the schema file inside the container. |
+| `WORKERS` | `1` | Number of concurrent scan workers (1 is recommended for Raspberry Pi). |
+| `MQTT_ENABLED` | `false` | Set to `true` to enable MQTT publishing. |
+| `MQTT_HOST` | `localhost` | IP/Hostname of your MQTT broker. |
+
+### Persistent Storage
+To preserve your device history and configuration across container updates, map a local directory to `/data`:
+
+```yaml
+volumes:
+  - ./hnms_data:/data
+```
+
+### Networking Requirements (Linux)
+The scanner requires raw socket access to perform ARP requests.
+- **Host Mode**: Use `network_mode: host` in `docker-compose.yml`.
+- **Bridge Mode**: If using bridge mode, MAC address resolution will be limited to the container virtual interface.
+
+---
+
+## 🚀 Quick Start (Docker Compose)
 
 > [!IMPORTANT]
 > For Linux deployments, use `network_mode: host` in `docker-compose.yml` to allow the scanner full access to the network interface.
@@ -132,8 +166,6 @@ docker pull wglabz/hnms:latest
 docker-compose up -d
 ```
 Access at: [http://localhost:8000](http://localhost:8000)
-
----
 
 ## 💻 Manual Development Setup
 

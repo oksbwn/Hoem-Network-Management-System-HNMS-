@@ -129,6 +129,24 @@ npm run dev
 
 ---
 
+## 🛠️ Windows Troubleshooting
+
+If device discovery is not working on your Windows machine, please check the following:
+
+### 1. Install Npcap
+The scanner uses Scapy, which requires a packet capture driver on Windows. 
+- Download and install **[Npcap](https://npcap.com/#download)**.
+- During installation, ensure the **"Install Npcap in WinPcap API-compatible Mode"** option is checked.
+
+### 2. Run as Administrator
+Sending raw network packets (ARP) requires high-level privileges. 
+- Open your terminal (PowerShell or CMD) as **Administrator** before running the uvicorn command.
+
+### 3. Automatic Fallback
+The system includes a smart fallback. If raw ARP packets are restricted by your security policy, HNMS will automatically pivot to a **Parallel Ping Sweep**. This ensures devices are found even without specialized drivers, though MAC address resolution may be less accurate.
+
+---
+
 ## 📂 Project Structure
 - `/backend`: Analytical core and scanning workers.
 - `/ui`: Modern glassmorphism interface.

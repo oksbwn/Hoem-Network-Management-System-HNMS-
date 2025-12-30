@@ -2,10 +2,20 @@ import asyncio
 import json
 import uuid
 import logging
+import sys
+import subprocess
+import re
+import ipaddress
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
-from scapy.all import ARP, Ether, srp
+from scapy.all import ARP, Ether, srp, conf
 from app.core.db import get_connection
+
+if sys.platform == "win32":
+    try:
+        conf.use_pcap = True
+    except:
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +31,24 @@ async def resolve_hostname(ip: str) -> Optional[str]:
     except:
         return None
 
-async def scan_ports(ip: str, ports: List[int] = [
-    21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 548, 587, 631, 993, 995, 1883, 2049, 2375, 3000, 32400, 3306, 3389, 5000, 5353, 5432, 5555, 5683, 5900, 6379, 8006, 8080, 8081, 8123, 8443, 8883, 8888, 9000, 9090, 9091, 10000
-]) -> List[Dict[str, Any]]:
+def get_lookup_ports() -> List[int]:
+    """Fetches all unique ports defined in classification rules for lookup."""
+    from app.services.classification import get_rules
+    rules = get_rules()
+    ports = set()
+    for r in rules:
+        for p in r.get("ports", []):
+            ports.add(p)
+    # Ensure some basics are always there even if not in rules
+    basics = {80, 443, 22, 1883, 53, 5000, 8080, 8123}
+    ports.update(basics)
+    return sorted(list(ports))
+
+async def scan_ports(ip: str, ports: Optional[List[int]] = None) -> List[Dict[str, Any]]:
+    # Dynamic port lookup - only scan ports defined in rules for classification
+    if ports is None:
+        ports = await asyncio.to_thread(get_lookup_ports)
+        
     # Use native asyncio for better performance
     semaphore = asyncio.Semaphore(50) # Allow more concurrency
 
@@ -36,8 +61,41 @@ async def scan_ports(ip: str, ports: List[int] = [
                 writer.close()
                 await writer.wait_closed()
                 
-                # Resolve service name in thread to avoid blocking loop
+                # Resolve service name 
+                COMMON_SERVICES = {
+                    6053: "ESPHome API",
+                    8123: "Home Assistant",
+                    1883: "MQTT",
+                    8883: "MQTT (SSL)",
+                    5432: "PostgreSQL",
+                    3306: "MySQL",
+                    6379: "Redis",
+                    8006: "Proxmox VE",
+                    5000: "Synology DSM",
+                    5001: "Synology DSM (SSL)",
+                    32400: "Plex Media Server",
+                    8096: "Jellyfin",
+                    1400: "Sonos",
+                    8291: "Winbox (MikroTik)",
+                    10001: "Ubiquiti Discovery",
+                    8080: "HTTP Proxy/Admin",
+                    8443: "HTTPS Proxy/Admin",
+                    554: "RTSP (Camera)",
+                    8000: "HTTP Alt/Camera",
+                    3000: "AdGuard/Grafana",
+                    9000: "Portainer",
+                    9443: "Portainer (SSL)",
+                    53: "DNS",
+                    22: "SSH",
+                    23: "Telnet",
+                    21: "FTP",
+                    445: "SMB/CIFS",
+                    139: "NetBIOS",
+                }
+
                 def get_service():
+                    if p in COMMON_SERVICES:
+                        return COMMON_SERVICES[p]
                     import socket
                     try: return socket.getservbyport(p)
                     except: return "unknown"
@@ -93,15 +151,91 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str = "arp", option
         def network_discovery():
             try:
                 logger.info(f"Triggering Scapy ARP discovery for {target}...")
-                ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=target), timeout=5, retry=2, verbose=False)
+                ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=target), timeout=2, retry=1, verbose=False)
                 results = [{"ip": rcve.psrc, "mac": rcve.hwsrc} for sent, rcve in ans]
                 logger.info(f"Scapy discovery found {len(results)} raw responses.")
                 return results
             except Exception as e:
-                logger.error(f"Scapy scan failed critical error: {e}")
+                err_str = str(e).lower()
+                if "winpcap" in err_str or "pcap" in err_str:
+                    logger.warning("Scapy Layer 2 discovery restricted: Npcap/WinPcap not found. Switching to Layer 3 Ping Fallback.")
+                else:
+                    logger.error(f"Scapy scan failed: {e}")
                 return []
 
+        async def ping_discovery_fallback(target_str: str) -> List[Dict[str, str]]:
+            """Parallel ping sweep for targets when ARP fails/is restricted."""
+            try:
+                # Handle possible multiple targets
+                subnets = target_str.split()
+                all_ips = []
+                for s in subnets:
+                    try:
+                        net = ipaddress.ip_network(s, strict=False)
+                        all_ips.extend(list(net.hosts()))
+                    except:
+                        continue
+                
+                if not all_ips: return []
+
+                logger.info(f"Falling back to Ping Sweep for {len(all_ips)} IPs...")
+                
+                semaphore = asyncio.Semaphore(100) # Faster sweep
+                async def check_ip(ip_obj):
+                    async with semaphore:
+                        ip_str = str(ip_obj)
+                        
+                        def sync_ping():
+                            try:
+                                # Use synchronous subprocess in a thread to avoid event loop issues on Windows
+                                cmd = ["ping", "-n", "1", "-w", "500", ip_str] if sys.platform == "win32" else ["ping", "-c", "1", "-W", "1", ip_str]
+                                # We only care about return code
+                                result = subprocess.run(cmd, capture_output=True, timeout=2)
+                                if result.returncode == 0:
+                                    # Success - try to get MAC from system ARP cache
+                                    return get_mac_from_cache(ip_str)
+                                return None
+                            except:
+                                return None
+
+                        mac = await asyncio.to_thread(sync_ping)
+                        if mac is not None or sys.platform == "win32": # On windows, return IP even if MAC resolution failed in cache
+                             # If we found it via ping, we should at least report the IP
+                             return {"ip": ip_str, "mac": mac if mac else "unknown"}
+                        return None
+
+                results = await asyncio.gather(*(check_ip(ip) for ip in all_ips))
+                # Filter out None and deduplicate by IP
+                found_map = {}
+                for r in results:
+                    if r and r["ip"] not in found_map:
+                        found_map[r["ip"]] = r
+                
+                found = list(found_map.values())
+                logger.info(f"Ping Sweep found {len(found)} responsive devices.")
+                return found
+            except Exception as e:
+                logger.error(f"Ping sweep failed: {e}", exc_info=True)
+                return []
+
+        def get_mac_from_cache(ip: str) -> Optional[str]:
+            """Retrieves MAC from system ARP table if available."""
+            try:
+                cmd = ["arp", "-a", ip]
+                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, timeout=2).decode()
+                # Match MAC pattern
+                match = re.search(r"(([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2}))", output)
+                if match:
+                    return match.group(1).replace('-', ':').lower()
+            except:
+                pass
+            return None
+
         raw_devices = await asyncio.to_thread(network_discovery)
+        
+        # If ARP found nothing, try Ping Sweep (Discovery Fallback)
+        if not raw_devices:
+            raw_devices = await ping_discovery_fallback(target)
         
         # CRITICAL FIX: Deduplicate results BEFORE processing or saving.
         # This prevents 499+ devices being shown in the history.
@@ -120,7 +254,7 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str = "arp", option
             async with semaphore:
                 ip, mac = device["ip"], device["mac"]
                 hostname = await resolve_hostname(ip)
-                # Keep discovery port scan minimal
+                # Perform specialized Port Lookup for classification
                 ports_list = await scan_ports(ip)
                 return {"ip": ip, "mac": mac, "hostname": hostname, "ports_list": ports_list, "result_id": str(uuid.uuid4())}
 
@@ -146,9 +280,9 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str = "arp", option
         
         if processed_results:
             await asyncio.to_thread(save_and_update)
-            from app.services.devices import upsert_device_from_scan
-            for res in processed_results:
-                await upsert_device_from_scan(res["ip"], res["mac"], res["hostname"], res["ports_list"])
+            from app.services.devices import batch_upsert_devices
+            batch_data = [{"ip": r["ip"], "mac": r["mac"], "hostname": r["hostname"], "ports": r["ports_list"]} for r in processed_results]
+            await batch_upsert_devices(batch_data)
 
         # 5. Handle Offline state
         def finalize_scan():

@@ -46,8 +46,18 @@ async def handle_schedules():
                 except: pass
                 
             trigger_global = False
-            if scan_subnets_raw and (last_run is None or now >= last_run + timedelta(seconds=scan_interval)):
-                trigger_global = True
+            if scan_subnets_raw:
+                if last_run is None:
+                    logger.info("No last run record found for global discovery. Triggering now.")
+                    trigger_global = True
+                elif now >= last_run + timedelta(seconds=scan_interval):
+                    diff = (now - last_run).total_seconds()
+                    logger.info(f"Global discovery interval reached ({diff}s since last run, interval: {scan_interval}s). Triggering.")
+                    trigger_global = True
+                else:
+                    wait_time = (last_run + timedelta(seconds=scan_interval) - now).total_seconds()
+                    # logger.debug(f"Global discovery interval not reached. Waiting {wait_time:.1f}s more.")
+                    pass
 
             # 2. Handle specific schedules
             rows = conn.execute(
@@ -80,7 +90,8 @@ async def handle_schedules():
                 def update_last_run():
                     conn = get_connection()
                     try:
-                        conn.execute("INSERT OR REPLACE INTO config (key, value, updated_at) VALUES ('last_discovery_run_at', ?, now())", [now.isoformat()])
+                        # Use isoformat(timespec='seconds') for cleaner storage
+                        conn.execute("INSERT OR REPLACE INTO config (key, value, updated_at) VALUES ('last_discovery_run_at', ?, ?)", [now.isoformat(), now])
                         conn.commit()
                     finally: conn.close()
                 await asyncio.to_thread(update_last_run)

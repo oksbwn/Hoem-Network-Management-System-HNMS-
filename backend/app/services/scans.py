@@ -193,14 +193,17 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str = "arp", option
                                 result = subprocess.run(cmd, capture_output=True, timeout=2)
                                 if result.returncode == 0:
                                     # Success - try to get MAC from system ARP cache
-                                    return get_mac_from_cache(ip_str)
+                                    mac = get_mac_from_cache(ip_str)
+                                    return mac if mac else "unknown"
                                 return None
                             except:
                                 return None
 
-                        mac = await asyncio.to_thread(sync_ping)
-                        # Always return the IP if it responded to ping, even if MAC resolution failed
-                        return {"ip": ip_str, "mac": mac if mac else "unknown"}
+                        res = await asyncio.to_thread(sync_ping)
+                        if res is None:
+                            return None # Device didn't respond to ping
+                            
+                        return {"ip": ip_str, "mac": res}
 
                 results = await asyncio.gather(*(check_ip(ip) for ip in all_ips))
                 # Filter out None and deduplicate by IP

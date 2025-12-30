@@ -14,20 +14,77 @@
                         class="text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 leading-none mb-1">Select
                         Network</span>
                     <div class="relative flex items-center gap-2">
-                        <select v-model="selectedSubnet"
-            class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm transition focus:ring-2 focus:ring-blue-500 outline-none"
-            v-tooltip="'Select Subnet to Visualize'">
-            <option v-for="sub in availableSubnets" :key="sub" :value="sub">{{ sub }}.0/24</option>
-          </select>
-          <button @click="fetchOccupancy" :disabled="loading"
-            class="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400"
-            v-tooltip="'Refresh Occupancy Data'">
-            <component :is="refreshIcon" class="w-5 h-5" :class="{ 'animate-spin': loading, 'text-emerald-500': showSuccess }" />
-          </button>
+                        <!-- Filter Dropdown -->
+                        <div class="relative min-w-[140px]" v-click-outside="() => isFilterOpen = false">
+                            <button @click="isFilterOpen = !isFilterOpen"
+                                class="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-blue-400/50 hover:shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20 active:scale-[0.98]">
+                                <span class="truncate mr-2">
+                                    {{ filterStatus === 'all' ? 'All Status' : (filterStatus === 'online'
+                                        ? 'Online Only'
+                                        : (filterStatus === 'offline' ? 'Offline Only' : 'Available Only')) }}
+                                </span>
+                                <ChevronDown class="w-4 h-4 text-slate-400 transition-transform duration-200"
+                                    :class="{ 'rotate-180': isFilterOpen }" />
+                            </button>
+
+                            <transition enter-active-class="transition duration-100 ease-out"
+                                enter-from-class="transform scale-95 opacity-0"
+                                enter-to-class="transform scale-100 opacity-100"
+                                leave-active-class="transition duration-75 ease-in"
+                                leave-from-class="transform scale-100 opacity-100"
+                                leave-to-class="transform scale-95 opacity-0">
+                                <div v-if="isFilterOpen"
+                                    class="absolute z-50 top-full left-0 mt-2 w-full min-w-[140px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden py-1">
+                                    <button v-for="opt in ['all', 'online', 'offline', 'available']" :key="opt"
+                                        @click="filterStatus = opt; isFilterOpen = false"
+                                        class="w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                                        :class="filterStatus === opt ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-600 dark:text-slate-300'">
+                                        <span class="capitalize">{{ opt }}</span>
+                                        <Check v-if="filterStatus === opt" class="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </transition>
+                        </div>
+
+
+                        <div class="relative min-w-[200px]" v-click-outside="() => isSubnetOpen = false">
+                            <button @click="isSubnetOpen = !isSubnetOpen"
+                                class="w-full flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-blue-400/50 hover:shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20 active:scale-[0.98]">
+                                <span class="truncate mr-2">
+                                    {{ selectedSubnet ? `${selectedSubnet}.0/24` : 'Select Subnet' }}
+                                </span>
+                                <ChevronDown class="w-4 h-4 text-slate-400 transition-transform duration-200"
+                                    :class="{ 'rotate-180': isSubnetOpen }" />
+                            </button>
+
+                            <transition enter-active-class="transition duration-100 ease-out"
+                                enter-from-class="transform scale-95 opacity-0"
+                                enter-to-class="transform scale-100 opacity-100"
+                                leave-active-class="transition duration-75 ease-in"
+                                leave-from-class="transform scale-100 opacity-100"
+                                leave-to-class="transform scale-95 opacity-0">
+                                <div v-if="isSubnetOpen"
+                                    class="absolute z-50 top-full left-0 mt-2 w-full min-w-[200px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden py-1 max-h-60 overflow-y-auto custom-scrollbar">
+                                    <button v-for="sub in availableSubnets" :key="sub"
+                                        @click="selectedSubnet = sub; isSubnetOpen = false"
+                                        class="w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                                        :class="selectedSubnet === sub ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-600 dark:text-slate-300'">
+                                        <span class="font-mono">{{ sub }}.0/24</span>
+                                        <Check v-if="selectedSubnet === sub" class="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </transition>
+                        </div>
+                        <button @click="fetchOccupancy" :disabled="loading"
+                            class="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400"
+                            v-tooltip="'Refresh Occupancy Data'">
+                            <component :is="refreshIcon" class="w-5 h-5"
+                                :class="{ 'animate-spin': loading, 'text-emerald-500': showSuccess }" />
+                        </button>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-    </div>
 
         <!-- Summary Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -70,7 +127,7 @@
                 <div v-for="rowIndex in 8" :key="rowIndex">
                     <div class="flex items-center gap-3 mb-3">
                         <span class="text-xs font-medium text-slate-500 dark:text-slate-400">.{{ (rowIndex - 1) * 32 + 1
-                            }} - .{{ Math.min(rowIndex * 32, 254) }}</span>
+                        }} - .{{ Math.min(rowIndex * 32, 254) }}</span>
                         <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
                     </div>
                     <div class="grid grid-cols-8 md:grid-cols-16 gap-2">
@@ -103,7 +160,7 @@
                                         <div class="flex justify-between items-center">
                                             <span class="opacity-75">Last Seen:</span>
                                             <span>{{ formatRelativeTime(getDevice((rowIndex - 1) * 32 + i).last_seen)
-                                            }}</span>
+                                                }}</span>
                                         </div>
                                         <div class="flex justify-between items-center">
                                             <span class="opacity-75">Open Ports:</span>
@@ -123,16 +180,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-import { Network, ChevronDown, Database, Wifi, ZapOff, CheckCircle, RefreshCw } from 'lucide-vue-next'
+import { Network, ChevronDown, Database, Wifi, ZapOff, CheckCircle, RefreshCw, Check } from 'lucide-vue-next'
 import Sparkline from '@/components/Sparkline.vue'
 import { formatRelativeTime } from '@/utils/date'
 
 const devices = ref([])
 const router = useRouter()
 const selectedSubnet = ref('')
+const isSubnetOpen = ref(false)
+const filterStatus = ref('all')
+const isFilterOpen = ref(false)
+
+
+
+const vClickOutside = {
+    mounted(el, binding) {
+        el._clickOutside = (event) => {
+            if (!(el === event.target || el.contains(event.target))) {
+                binding.value(event)
+            }
+        }
+        document.addEventListener('click', el._clickOutside)
+    },
+    unmounted(el) {
+        document.removeEventListener('click', el._clickOutside)
+    }
+}
 
 const availableSubnets = computed(() => {
     const subnets = new Set()
@@ -208,14 +284,31 @@ const summaryStats = computed(() => {
 
 const getStatusClass = (suffix) => {
     const d = getDevice(suffix)
+    let opacityClass = ''
+
+    // Dimming Logic & Highlighting
+    let highlightClass = ''
+    if (filterStatus.value === 'online') {
+        if (!d || d.status !== 'online') opacityClass = 'opacity-5 grayscale blur-[1px] transition-all duration-500'
+    } else if (filterStatus.value === 'offline') {
+        if (!d || d.status !== 'offline') opacityClass = 'opacity-5 grayscale blur-[1px] transition-all duration-500'
+    } else if (filterStatus.value === 'available') {
+        if (d) {
+            opacityClass = 'opacity-5 grayscale blur-[1px] transition-all duration-500'
+        } else {
+            // Highlight available slots
+            highlightClass = 'ring-2 ring-blue-500 bg-blue-100 scale-105 z-10 shadow-md font-bold'
+        }
+    }
+
     // Non-used IP: Blue accent
-    if (!d) return 'bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 border-blue-100/50 dark:border-blue-800/20 shadow-sm'
+    if (!d) return `bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 border-blue-100/50 dark:border-blue-800/20 shadow-sm ${opacityClass} ${highlightClass}`
 
     // Online Device: Emerald accent
-    if (d.status === 'online') return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 ring-1 ring-emerald-200 dark:ring-emerald-800/50'
+    if (d.status === 'online') return `bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 ring-1 ring-emerald-200 dark:ring-emerald-800/50 ${opacityClass}`
 
     // Offline Device: Red accent
-    return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 ring-1 ring-red-200 dark:ring-red-800/50'
+    return `bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 ring-1 ring-red-200 dark:ring-red-800/50 ${opacityClass}`
 }
 
 const goToDevice = (suffix) => {
@@ -242,9 +335,9 @@ const refreshIcon = computed(() => showSuccess.value ? CheckCircle : RefreshCw)
 const fetchOccupancy = async () => {
     loading.value = true
     try {
-        const res = await axios.get('/api/v1/devices/')
-        devices.value = res.data
-        
+        const res = await axios.get('/api/v1/devices/export/json')
+        devices.value = res.data.items || res.data
+
         // Show success state
         showSuccess.value = true
         setTimeout(() => {
@@ -262,15 +355,15 @@ onMounted(async () => {
     if (devices.value.length > 0 && !selectedSubnet.value) {
         const counts = {}
         devices.value.forEach(d => {
-             const parts = d.ip.split('.')
-             if (parts.length === 4) {
-                 const sub = `${parts[0]}.${parts[1]}.${parts[2]}`
-                 counts[sub] = (counts[sub] || 0) + 1
-             }
+            const parts = d.ip.split('.')
+            if (parts.length === 4) {
+                const sub = `${parts[0]}.${parts[1]}.${parts[2]}`
+                counts[sub] = (counts[sub] || 0) + 1
+            }
         })
         const subnetKeys = Object.keys(counts)
         if (subnetKeys.length > 0) {
-             selectedSubnet.value = subnetKeys.reduce((a, b) => counts[a] > counts[b] ? a : b)
+            selectedSubnet.value = subnetKeys.reduce((a, b) => counts[a] > counts[b] ? a : b)
         }
     }
 })

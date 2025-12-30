@@ -75,9 +75,10 @@ async def _internal_list_devices(
             base_sql += f" ORDER BY {safe_sort} {order}"
             
             # Pagination
-            offset = (page - 1) * limit
-            base_sql += " LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
+            if limit > 0:
+                offset = (page - 1) * limit
+                base_sql += " LIMIT ? OFFSET ?"
+                params.extend([limit, offset])
             
             rows = conn.execute(base_sql, params).fetchall()
             items = [
@@ -91,12 +92,17 @@ async def _internal_list_devices(
                 for r in rows
             ]
             
+            # Calculate total pages correctly
+            total_pages = 1
+            if limit > 0:
+                total_pages = math.ceil(total / limit) if total > 0 else 1
+
             return PaginatedDevicesResponse(
                 items=items,
                 total=total,
                 page=page,
-                limit=limit,
-                total_pages=math.ceil(total / limit) if limit > 0 else 1,
+                limit=limit if limit > 0 else total,
+                total_pages=total_pages,
                 global_stats=global_stats
             )
         finally:
@@ -175,7 +181,7 @@ async def update_device_by_put(device_id: str, update_data: DeviceUpdate):
 
 @router.get("/export/json")
 async def export_devices():
-    return await _internal_list_devices()
+    return await _internal_list_devices(limit=-1)
 
 @router.post("/import/json")
 async def import_devices(devices_data: List[DeviceRead]):

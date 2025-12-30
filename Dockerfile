@@ -4,7 +4,7 @@ FROM python:3.12-slim
 # Install system dependencies (nmap for scanner)
 # Install system dependencies (nmap for scanner, nginx, supervisor)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends nmap nginx supervisor && \
+    apt-get install -y --no-install-recommends nmap nginx supervisor net-tools iputils-ping && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

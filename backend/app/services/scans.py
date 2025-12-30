@@ -199,10 +199,8 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str = "arp", option
                                 return None
 
                         mac = await asyncio.to_thread(sync_ping)
-                        if mac is not None or sys.platform == "win32": # On windows, return IP even if MAC resolution failed in cache
-                             # If we found it via ping, we should at least report the IP
-                             return {"ip": ip_str, "mac": mac if mac else "unknown"}
-                        return None
+                        # Always return the IP if it responded to ping, even if MAC resolution failed
+                        return {"ip": ip_str, "mac": mac if mac else "unknown"}
 
                 results = await asyncio.gather(*(check_ip(ip) for ip in all_ips))
                 # Filter out None and deduplicate by IP
@@ -231,22 +229,23 @@ async def run_scan_job(scan_id: str, target: str, scan_type: str = "arp", option
                 pass
             return None
 
-        raw_devices = await asyncio.to_thread(network_discovery)
+        arp_results = await asyncio.to_thread(network_discovery)
+        ping_results = await ping_discovery_fallback(target)
         
-        # If ARP found nothing, try Ping Sweep (Discovery Fallback)
-        if not raw_devices:
-            raw_devices = await ping_discovery_fallback(target)
+        # Merge results - ARP is highest priority for MACs
+        found_map = {d["ip"]: d for d in arp_results}
         
-        # CRITICAL FIX: Deduplicate results BEFORE processing or saving.
-        # This prevents 499+ devices being shown in the history.
-        unique_devices_map = {}
-        for d in raw_devices:
-            key = (d["mac"] or d["ip"]).lower()
-            if key not in unique_devices_map:
-                unique_devices_map[key] = d
+        for p in ping_results:
+            if p["ip"] not in found_map:
+                found_map[p["ip"]] = p
+            else:
+                # If ARP found it but has a missing mac (unlikely but possible), take it from ping/cache
+                if not found_map[p["ip"]].get("mac") or found_map[p["ip"]]["mac"] == "unknown":
+                    if p.get("mac") and p["mac"] != "unknown":
+                        found_map[p["ip"]]["mac"] = p["mac"]
         
-        unique_devices = list(unique_devices_map.values())
-        logger.info(f"Filtered {len(raw_devices)} raw responses down to {len(unique_devices)} unique devices.")
+        unique_devices = list(found_map.values())
+        logger.info(f"Discovery phase complete. Scapy: {len(arp_results)}, Ping: {len(ping_results)}. Unique: {len(unique_devices)}")
 
         # 3. Parallelize device enrichment
         semaphore = asyncio.Semaphore(4)

@@ -5,24 +5,29 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+_shared_conn: duckdb.DuckDBPyConnection = None
+
 def get_connection() -> duckdb.DuckDBPyConnection:
     """
-    Returns a NEW DuckDB connection. 
-    Opening a connection in DuckDB is fast and recommended for thread safety in web apps.
-    Callers MUST call .close() when done.
+    Returns a cursor from a shared DuckDB connection.
+    This pattern is much more stable on Windows to prevent 'Database is locked' errors.
+    The shared connection handles the file lock, and each call returns a thread-safe cursor.
     """
-    settings = get_settings()
-    db_path = Path(settings.db_path)
+    global _shared_conn
+    if _shared_conn is None:
+        settings = get_settings()
+        db_path = Path(settings.db_path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Open the master connection for the process
+        _shared_conn = duckdb.connect(str(db_path))
+        
+        # Optimize DuckDB for concurrency
+        _shared_conn.execute("SET threads TO 4")
+        _shared_conn.execute("SET memory_limit = '512MB'")
     
-    # Ensure directory exists
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Open a new connection. 
-    # This ensures each thread has its own transaction state.
-    conn = duckdb.connect(str(db_path))
-    
-    
-    return conn
+    # Return a cursor based on the master connection
+    return _shared_conn.cursor()
 
 def commit(conn: duckdb.DuckDBPyConnection) -> None:
     """Commits the given connection."""
@@ -44,6 +49,7 @@ def init_db() -> None:
                 DROP TABLE IF EXISTS scan_results;
                 DROP TABLE IF EXISTS scans;
                 DROP TABLE IF EXISTS config;
+                DROP TABLE IF EXISTS classification_rules;
             """)
 
         print(f"Loading schema from {settings.db_schema_path}...")
@@ -52,6 +58,9 @@ def init_db() -> None:
         
         # Migrations
         migrate_db(conn)
+        
+        # Seeding
+        seed_classification_rules(conn)
         
         print("Database initialized successfully.")
         conn.commit()
@@ -124,4 +133,69 @@ def migrate_db(conn: duckdb.DuckDBPyConnection) -> None:
         conn.execute("DROP TABLE device_ports")
         conn.execute("ALTER TABLE device_ports_new RENAME TO device_ports")
     
+    # 3. Normalize protocol to lowercase and deduplicate
+    try:
+        current_data = conn.execute("SELECT device_id, port, protocol FROM device_ports").fetchall()
+        has_uppercase = any(d[2] != d[2].lower() for d in current_data)
+        
+        if has_uppercase:
+            print("Migration: Normalizing protocols to lowercase and deduplicating...")
+            # We'll use a temporary table to deduplicate
+            conn.execute("CREATE TABLE device_ports_dedup (device_id TEXT, port INTEGER, protocol TEXT, service TEXT, banner TEXT, last_seen TIMESTAMP, UNIQUE(device_id, port, protocol))")
+            
+            # Insert with REPLACE to keep the latest service name/time for the lowercase version
+            conn.execute("""
+                INSERT OR REPLACE INTO device_ports_dedup (device_id, port, protocol, service, banner, last_seen)
+                SELECT device_id, port, LOWER(protocol), service, banner, last_seen
+                FROM device_ports
+                ORDER BY last_seen ASC
+            """)
+            
+            conn.execute("DROP TABLE device_ports")
+            conn.execute("ALTER TABLE device_ports_dedup RENAME TO device_ports")
+            print("Migration: Protocols normalized successfully.")
+    except Exception as e:
+        print(f"Migration error (normalization): {e}")
+
     conn.commit()
+
+def seed_classification_rules(conn: duckdb.DuckDBPyConnection) -> None:
+    """Seeds the classification_rules table from initial_rules.json if empty."""
+    try:
+        count = conn.execute("SELECT count(*) FROM classification_rules").fetchone()[0]
+        if count > 0:
+            return
+
+        print("Seeding initial classification rules...")
+        import json
+        import uuid
+        from pathlib import Path
+        
+        rules_path = Path(__file__).parent.parent / "core" / "initial_rules.json"
+        if not rules_path.exists():
+            print(f"Warning: {rules_path} not found. Skipping seeding.")
+            return
+            
+        rules_data = json.loads(rules_path.read_text(encoding="utf-8"))
+        for rule in rules_data:
+            conn.execute(
+                """
+                INSERT INTO classification_rules (id, name, pattern_hostname, pattern_vendor, ports, device_type, icon, priority, is_builtin)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    str(uuid.uuid4()),
+                    rule["name"],
+                    rule.get("pattern_hostname"),
+                    rule.get("pattern_vendor"),
+                    json.dumps(rule.get("ports", [])),
+                    rule["device_type"],
+                    rule["icon"],
+                    rule.get("priority", 100),
+                    True # is_builtin
+                ]
+            )
+        conn.commit()
+        print(f"Successfully seeded {len(rules_data)} classification rules.")
+    except Exception as e:
+        print(f"Error seeding classification rules: {e}")

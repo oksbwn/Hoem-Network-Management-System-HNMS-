@@ -18,139 +18,133 @@ async def upsert_device_from_scan(
     hostname: Optional[str],
     ports: List[Dict[str, Any]],
 ) -> str:
-    def sync_upsert():
+    """Wrapper for backward compatibility, uses batch_upsert for safety."""
+    res = await batch_upsert_devices([{"ip": ip, "mac": mac, "hostname": hostname, "ports": ports}])
+    return res[0] if res else ""
+
+async def batch_upsert_devices(devices_data: List[Dict[str, Any]]) -> List[str]:
+    """
+    Upserts multiple devices in a single database transaction.
+    Greatly reduces DuckDB 'Database is locked' issues.
+    """
+    if not devices_data:
+        return []
+
+    def sync_batch_upsert():
         conn = get_connection()
         try:
             now = datetime.now(timezone.utc)
-            device_id = None
-            existing_device = None
+            upserted_ids = []
+            new_devices_to_enrich = [] # (id, mac)
             
-            if mac:
-                existing_device = conn.execute(
-                    "SELECT id, first_seen, last_seen, ip, attributes, status FROM devices WHERE mac = ?", 
-                    [mac]
-                ).fetchone()
-            
-            if not existing_device:
-                existing_device = conn.execute(
-                    "SELECT id, first_seen, last_seen, ip, attributes, status FROM devices WHERE ip = ?", 
-                    [ip]
-                ).fetchone()
+            from app.services.classification import classify_device, get_vendor_locally
 
-            is_new = False
-            old_status = 'unknown'
-            
-            from app.services.classification import classify_device
-            port_numbers = [p["port"] for p in ports]
-            guessed_type, guessed_icon = classify_device(hostname, None, port_numbers)
+            for data in devices_data:
+                ip = data["ip"]
+                mac = data.get("mac")
+                hostname = data.get("hostname")
+                protocol = data.get("protocol", "tcp").lower()
+                ports = data.get("ports", [])
+                
+                device_id = None
+                existing_device = None
+                
+                if mac:
+                    existing_device = conn.execute(
+                        "SELECT id, first_seen, last_seen, ip, attributes, status FROM devices WHERE mac = ?", 
+                        [mac]
+                    ).fetchone()
+                
+                if not existing_device:
+                    existing_device = conn.execute(
+                        "SELECT id, first_seen, last_seen, ip, attributes, status FROM devices WHERE ip = ?", 
+                        [ip]
+                    ).fetchone()
 
-            if existing_device:
-                device_id, first_seen, last_seen, old_ip, attributes_raw, old_status = existing_device
+                is_new = False
+                old_status = 'unknown'
+                
+                port_numbers = [p["port"] for p in ports]
+                guessed_type, guessed_icon = classify_device(hostname, None, port_numbers)
+
+                if existing_device:
+                    device_id, first_seen, last_seen, old_ip, attributes_raw, old_status = existing_device
+                    conn.execute(
+                        """
+                        UPDATE devices
+                        SET last_seen = ?,
+                            ip = ?,
+                            mac = COALESCE(?, mac),
+                            name = COALESCE(name, ?),
+                            device_type = COALESCE(device_type, ?),
+                            icon = COALESCE(icon, ?),
+                            open_ports = ?,
+                            status = ?
+                        WHERE id = ?
+                        """,
+                        [now, ip, mac, hostname, guessed_type, guessed_icon, json.dumps(ports), 'online', device_id]
+                    )
+                else:
+                    is_new = True
+                    device_id = str(uuid4())
+                    conn.execute(
+                        """
+                        INSERT INTO devices (id, ip, mac, name, display_name, device_type, icon, open_ports, first_seen, last_seen, attributes, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        [device_id, ip, mac, hostname, hostname or ip, guessed_type, guessed_icon, json.dumps(ports), now, now, "{}", 'online']
+                    )
+
+                # Record status change if needed
+                if old_status != 'online':
+                    conn.execute(
+                        "INSERT INTO device_status_history (id, device_id, status, changed_at) VALUES (?, ?, ?, ?)",
+                        [str(uuid4()), device_id, 'online', now]
+                    )
+
+                for p in ports:
+                    p_proto = p.get("protocol", "tcp").lower()
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO device_ports (device_id, port, protocol, service, last_seen)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        [device_id, p["port"], p_proto, p["service"], now]
+                    )
+
+                all_ports_rows = conn.execute(
+                    "SELECT port, protocol, service FROM device_ports WHERE device_id = ? ORDER BY port",
+                    [device_id]
+                ).fetchall()
+                all_ports = [{"port": r[0], "protocol": r[1], "service": r[2]} for r in all_ports_rows]
+
                 conn.execute(
-                    """
-                    UPDATE devices
-                    SET last_seen = ?,
-                        ip = ?,
-                        mac = COALESCE(?, mac),
-                        name = COALESCE(name, ?),
-                        device_type = COALESCE(device_type, ?),
-                        icon = COALESCE(icon, ?),
-                        open_ports = ?,
-                        status = ?
-                    WHERE id = ?
-                    """,
-                    [now, ip, mac, hostname, guessed_type, guessed_icon, json.dumps(ports), 'online', device_id]
-                )
-            else:
-                is_new = True
-                device_id = str(uuid4())
-                conn.execute(
-                    """
-                    INSERT INTO devices (id, ip, mac, name, display_name, device_type, icon, open_ports, first_seen, last_seen, attributes, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    [device_id, ip, mac, hostname, hostname or ip, guessed_type, guessed_icon, json.dumps(ports), now, now, "{}", 'online']
+                    "UPDATE devices SET open_ports = ?, last_seen = ?, status = 'online' WHERE id = ?",
+                    [json.dumps(all_ports), now, device_id]
                 )
 
-            # Record status change if needed
-            if old_status != 'online':
-                conn.execute(
-                    "INSERT INTO device_status_history (id, device_id, status, changed_at) VALUES (?, ?, ?, ?)",
-                    [str(uuid4()), device_id, 'online', now]
-                )
+                if mac:
+                    local_vendor = get_vendor_locally(mac)
+                    if local_vendor:
+                        conn.execute("UPDATE devices SET vendor = COALESCE(vendor, ?) WHERE id = ?", [local_vendor, device_id])
+                
+                upserted_ids.append(device_id)
+                if mac:
+                    new_devices_to_enrich.append((device_id, mac))
 
-            # PORT MERGING STRATEGY: 
-            # 1. Don't clear port table (keep old results)
-            # 2. Insert new ports with REPLACE (updates last_seen)
-            for p in ports:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO device_ports (device_id, port, protocol, service, last_seen)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    [device_id, p["port"], p["protocol"], p["service"], now]
-                )
-
-            # 3. Fetch ALL known ports for this device to populate the JSON field
-            all_ports_rows = conn.execute(
-                "SELECT port, protocol, service FROM device_ports WHERE device_id = ? ORDER BY port",
-                [device_id]
-            ).fetchall()
-            
-            all_ports = [{"port": r[0], "protocol": r[1], "service": r[2]} for r in all_ports_rows]
-
-            # 4. Update the device record with the MERGED set of ports
-            conn.execute(
-                "UPDATE devices SET open_ports = ?, last_seen = ?, status = 'online' WHERE id = ?",
-                [json.dumps(all_ports), now, device_id]
-            )
-
-            if mac:
-                from app.services.classification import get_vendor_locally
-                local_vendor = get_vendor_locally(mac)
-                if local_vendor:
-                    conn.execute("UPDATE devices SET vendor = COALESCE(vendor, ?) WHERE id = ?", [local_vendor, device_id])
-            
-            # Fetch meta for MQTT
-            row = conn.execute("SELECT display_name, vendor, icon FROM devices WHERE id = ?", [device_id]).fetchone()
             conn.commit()
-            return device_id, is_new, old_status, row, now
+            return upserted_ids, new_devices_to_enrich
         finally:
             conn.close()
 
-    device_id, is_new, old_status, meta_row, now = await asyncio.to_thread(sync_upsert)
-    
-    # Enrichment and MQTT should happen outside the core lock if possible, 
-    # but enrich_device handles its own connections now.
-    if mac:
-        # Check if we need enrichment
-        def check_enrich():
-            conn = get_connection()
-            try:
-                row = conn.execute("SELECT vendor FROM devices WHERE id = ?", [device_id]).fetchone()
-                return not row or not row[0]
-            finally:
-                conn.close()
+    upserted_ids, to_enrich = await asyncio.to_thread(sync_batch_upsert)
+
+    # Background enrichment for each found device (async)
+    for d_id, mac in to_enrich:
+        asyncio.create_task(enrich_device(d_id, mac))
         
-        if await asyncio.to_thread(check_enrich):
-            await enrich_device(device_id, mac)
+    return upserted_ids
 
-    if is_new or old_status != 'online':
-        d_name, d_vendor, d_icon = meta_row if meta_row else (hostname or ip, None, None)
-        device_info = {
-            "id": device_id,
-            "ip": ip,
-            "mac": mac,
-            "hostname": d_name,
-            "vendor": d_vendor,
-            "icon": d_icon,
-            "status": "online",
-            "timestamp": now.isoformat()
-        }
-        from app.services.mqtt import publish_device_online
-        await asyncio.to_thread(publish_device_online, device_info)
-
-    return device_id
 
 async def record_status_change(conn, device_id: str, status: str, timestamp: datetime):
     # This remains for internal use if a connection is already open

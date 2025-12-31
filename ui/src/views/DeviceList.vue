@@ -489,7 +489,7 @@ const deviceStats = computed(() => {
     },
     {
       label: 'Top Vendor',
-      value: globalStats.value.top_vendor.length > 10 ? globalStats.value.top_vendor.substring(0, 8) + '..' : globalStats.value.top_vendor,
+      value: (globalStats.value.top_vendor && typeof globalStats.value.top_vendor === 'string' && globalStats.value.top_vendor.length > 10) ? globalStats.value.top_vendor.substring(0, 8) + '..' : (globalStats.value.top_vendor || 'None'),
       icon: LucideIcons.Ticket,
       color: '#8b5cf6',
       bgClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',

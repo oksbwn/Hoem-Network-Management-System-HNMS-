@@ -149,10 +149,19 @@ onMounted(async () => {
 
   try {
     const res = await axios.get('/api/v1/devices/')
-    devices.value = res.data
-    stats.value[0].value = devices.value.length
-    stats.value[1].value = devices.value.filter(d => d.status === 'online').length
-    stats.value[2].value = devices.value.filter(d => d.status === 'offline').length
+    // The API returns a paginated response { items: [], total: ..., global_stats: ... }
+    devices.value = res.data.items || [] // fallback if items is missing
+
+    if (res.data.global_stats) {
+      stats.value[0].value = res.data.global_stats.total
+      stats.value[1].value = res.data.global_stats.online
+      stats.value[2].value = res.data.global_stats.offline
+    } else {
+      // Fallback for older API shape if necessary (though API is updated)
+      stats.value[0].value = res.data.total || devices.value.length
+      stats.value[1].value = devices.value.filter(d => d.status === 'online').length
+      stats.value[2].value = devices.value.filter(d => d.status === 'offline').length
+    }
   } catch (e) {
     console.error(e)
   }

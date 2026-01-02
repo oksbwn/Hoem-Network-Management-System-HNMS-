@@ -44,7 +44,11 @@ async def _internal_list_devices(
             global_stats = {
                 "total": conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0],
                 "online": conn.execute("SELECT COUNT(*) FROM devices WHERE status = 'online'").fetchone()[0],
-                "offline": conn.execute("SELECT COUNT(*) FROM devices WHERE status = 'offline'").fetchone()[0]
+                "offline": conn.execute("SELECT COUNT(*) FROM devices WHERE status = 'offline'").fetchone()[0],
+                "untrusted": conn.execute("SELECT COUNT(*) FROM devices WHERE is_trusted = FALSE").fetchone()[0],
+                "trusted": conn.execute("SELECT COUNT(*) FROM devices WHERE is_trusted = TRUE").fetchone()[0],
+                "new_24h": conn.execute("SELECT COUNT(*) FROM devices WHERE first_seen > now() - interval '24 hours'").fetchone()[0],
+                "total_ports": conn.execute("SELECT COUNT(*) FROM device_ports").fetchone()[0]
             }
             vendor_row = conn.execute("""
                 SELECT vendor, COUNT(*) as count 
@@ -54,6 +58,7 @@ async def _internal_list_devices(
             """).fetchone()
             global_stats["top_vendor"] = vendor_row[0] if vendor_row else "None"
             global_stats["top_vendor_count"] = vendor_row[1] if vendor_row else 0
+            global_stats["unique_vendors"] = conn.execute("SELECT COUNT(DISTINCT vendor) FROM devices WHERE vendor IS NOT NULL AND vendor != 'Unknown' AND vendor != ''").fetchone()[0]
 
             # Now fetch the data
             base_sql = """

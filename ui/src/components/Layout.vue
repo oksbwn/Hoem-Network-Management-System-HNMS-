@@ -102,7 +102,8 @@ import {
   ChevronRightIcon,
   BellIcon,
   ChartBarIcon,
-  CommandLineIcon
+  CommandLineIcon,
+  ShareIcon
 } from '@heroicons/vue/24/outline'
 
 const sidebarCollapsed = ref(true)
@@ -112,6 +113,7 @@ const version = import.meta.env.VITE_APP_VERSION || 'v0.3.1'
 const navItems = [
   { name: 'Dashboard', path: '/', icon: HomeIcon },
   { name: 'Devices', path: '/devices', icon: ComputerDesktopIcon },
+  { name: 'Topology', path: '/topology', icon: ShareIcon },
   { name: 'Scan History', path: '/scans', icon: ListBulletIcon },
   { name: 'Events', path: '/events', icon: BellIcon },
   { name: 'Analytics', path: '/analytics', icon: ChartBarIcon },

@@ -432,6 +432,7 @@ import axios from 'axios'
 import Sparkline from '@/components/Sparkline.vue'
 import TrafficSparkline from '@/components/TrafficSparkline.vue'
 import EditDeviceModal from '@/components/EditDeviceModal.vue'
+import { getIcon } from '@/utils/icons'
 import * as LucideIcons from 'lucide-vue-next'
 const { Eye, Pencil, Trash2, Download, Upload, RefreshCw, Loader2, Search, ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, Activity, Wifi, Database, ZapOff, Ticket, Filter, Layers, ShieldCheck, ShieldAlert } = LucideIcons
 import { formatRelativeTime } from '@/utils/date'
@@ -516,56 +517,7 @@ const changePage = (page) => {
   fetchDevices()
 }
 
-const getIcon = (name) => {
-  if (!name) return LucideIcons.HelpCircle
-  // Direct match (PascalCase)
-  if (LucideIcons[name]) return LucideIcons[name]
-
-  // Legacy mapping (kebab-case -> PascalCase or map)
-  const legacyMap = {
-    'smartphone': 'Smartphone',
-    'tablet': 'Tablet',
-    'laptop': 'Laptop',
-    'monitor': 'Monitor',
-    'server': 'Server',
-    'router': 'Router',
-    'network': 'Network',
-    'layers': 'Layers',
-    'rss': 'Rss',
-    'tv': 'Tv',
-    'speaker': 'Speaker',
-    'play': 'Play',
-    'cpu': 'Cpu',
-    'lightbulb': 'Lightbulb',
-    'plug': 'Plug',
-    'microchip': 'Microchip',
-    'camera': 'Camera',
-    'waves': 'Waves',
-    'printer': 'Printer',
-    'hard-drive': 'HardDrive',
-    'gamepad-2': 'Gamepad2',
-    'help-circle': 'HelpCircle',
-    'computer-desktop': 'Monitor',
-    'device-laptop': 'Laptop',
-    'device-phone-mobile': 'Smartphone',
-    'device-tablet': 'Tablet',
-    'server-stack': 'Database',
-    'bolt': 'Zap',
-    'activity': 'Activity',
-    'wifi': 'Wifi',
-    'database': 'Database',
-    'zap-off': 'ZapOff',
-    'ticket': 'Ticket'
-  }
-
-  if (legacyMap[name] && LucideIcons[legacyMap[name]]) return LucideIcons[legacyMap[name]]
-
-  // Auto convert kebab to Pascal
-  const camel = name.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
-  if (LucideIcons[camel]) return LucideIcons[camel]
-
-  return LucideIcons.HelpCircle
-}
+// getIcon is now imported from @/utils/icons
 
 const getDeviceStatusColor = (device) => {
   if (device.status === 'online') return 'bg-emerald-500'

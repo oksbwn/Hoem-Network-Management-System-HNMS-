@@ -51,6 +51,11 @@ const routes = [
         path: 'logs',
         name: 'Logs',
         component: () => import('@/views/Logs.vue')
+      },
+      {
+        path: 'topology',
+        name: 'Topology',
+        component: () => import('@/views/Topology.vue')
       }
     ]
   }

@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS devices (
     status TEXT DEFAULT 'unknown',
     ip_type       TEXT,
     open_ports    TEXT,
-    attributes    TEXT
+    attributes    TEXT,
+    parent_id     TEXT
 );
 
 CREATE TABLE IF NOT EXISTS device_status_history (
@@ -105,3 +106,12 @@ CREATE TABLE IF NOT EXISTS device_traffic_history (
     down_rate   BIGINT DEFAULT 0, -- Bytes since last sync / check 
     up_rate     BIGINT DEFAULT 0
 );
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_history_device_id ON device_status_history(device_id);
+CREATE INDEX IF NOT EXISTS idx_history_changed_at ON device_status_history(changed_at);
+CREATE INDEX IF NOT EXISTS idx_traffic_device_id ON device_traffic_history(device_id);
+CREATE INDEX IF NOT EXISTS idx_traffic_timestamp ON device_traffic_history(timestamp);
+CREATE INDEX IF NOT EXISTS idx_scan_results_scan_id ON scan_results(scan_id);
+CREATE INDEX IF NOT EXISTS idx_scan_results_mac ON scan_results(mac);
+CREATE INDEX IF NOT EXISTS idx_scan_results_ip ON scan_results(ip);

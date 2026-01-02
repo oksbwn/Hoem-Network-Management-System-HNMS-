@@ -70,7 +70,7 @@
           class="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-8 shadow-2xl overflow-hidden group">
           <div
             class="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity">
-            <component :is="getIconComponent(form.icon || device.icon)" class="w-32 h-32" />
+            <component :is="getIcon(form.icon || device.icon)" class="w-32 h-32" />
           </div>
 
           <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
@@ -140,11 +140,10 @@
                 <PopoverButton
                   class="w-full flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all hover:bg-white dark:hover:bg-slate-800 group">
                   <div class="flex items-center gap-3">
-                    <component :is="getIconComponent(form.icon)" class="w-5 h-5 text-blue-500" />
+                    <component :is="getIcon(form.icon)" class="w-5 h-5 text-blue-500" />
                     <span class="text-sm font-medium">{{ form.icon || 'Select Icon' }}</span>
                   </div>
-                  <LucideIcons.ChevronDown
-                    class="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
+                  <ChevronDown class="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
                 </PopoverButton>
 
                 <transition enter-active-class="transition duration-200 ease-out"
@@ -168,7 +167,7 @@
                           class="p-3 rounded-xl transition-all flex items-center justify-center"
                           :class="form.icon === iconName ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'"
                           v-tooltip="iconName">
-                          <component :is="getIconComponent(iconName)" class="w-5 h-5" />
+                          <component :is="getIcon(iconName)" class="w-5 h-5" />
                         </button>
                       </div>
                       <div v-if="filteredIcons.length === 0" class="py-2 text-xs text-slate-400 text-center">
@@ -215,6 +214,50 @@
                       :class="form.ip_type === 'static' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'">
                       Static IP
                     </button>
+                  </div>
+                </transition>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <label
+                class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Connected
+                Via (Parent)</label>
+              <div class="relative w-full group" v-click-outside="() => isParentOpen = false">
+                <button @click="isParentOpen = !isParentOpen"
+                  class="w-full flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none hover:ring-4 hover:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium text-slate-900 dark:text-white group-hover:bg-white dark:group-hover:bg-slate-800">
+                  <span class="truncate">{{ getParentLabel }}</span>
+                  <ChevronDown class="h-4 w-4 text-slate-400 transition-transform duration-200"
+                    :class="{ 'rotate-180': isParentOpen }" />
+                </button>
+
+                <transition enter-active-class="transition duration-100 ease-out"
+                  enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100"
+                  leave-active-class="transition duration-75 ease-in" leave-from-class="transform scale-100 opacity-100"
+                  leave-to-class="transform scale-95 opacity-0">
+                  <div v-if="isParentOpen"
+                    class="absolute z-[60] mt-2 w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl py-1.5 overflow-hidden">
+                    <div class="px-3 py-2 border-b border-slate-100 dark:border-slate-700/50">
+                      <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-900/50 rounded-lg">
+                        <Search class="w-3.5 h-3.5 text-slate-400" />
+                        <input v-model="parentSearch" @click.stop type="text" placeholder="Search devices..."
+                          class="bg-transparent border-none outline-none text-xs text-slate-700 dark:text-slate-200 w-full placeholder:text-slate-400" />
+                      </div>
+                    </div>
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                      <button @click="form.parent_id = null; isParentOpen = false"
+                        class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-left hover:bg-blue-600 hover:text-white transition-colors"
+                        :class="!form.parent_id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'">
+                        Main Gateway (Default)
+                      </button>
+                      <button v-for="d in filteredPotentialParents" :key="d.id"
+                        @click="form.parent_id = d.id; isParentOpen = false"
+                        class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-left hover:bg-blue-600 hover:text-white transition-colors"
+                        :class="form.parent_id === d.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'">
+                        <component :is="getIcon(d.icon)" class="w-4 h-4 opacity-70" />
+                        <span>{{ d.display_name || d.name || d.ip }}</span>
+                      </button>
+                    </div>
                   </div>
                 </transition>
               </div>
@@ -458,7 +501,6 @@
 
 <script setup>
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue'
-import * as LucideIcons from 'lucide-vue-next'
 import { ref, onMounted, reactive, computed, watch } from 'vue'
 import {
   ArrowLeft, Loader2, Scan, Save, Search, ChevronDown, Activity, Terminal, ExternalLink, ShieldAlert, ShieldCheck,
@@ -469,6 +511,7 @@ import axios from 'axios'
 import TerminalModal from '../components/TerminalModal.vue'
 import { formatRelativeTime } from '@/utils/date'
 import { useNotifications } from '@/composables/useNotifications'
+import { getIcon } from '@/utils/icons'
 import { deviceTypes, availableIcons, typeToIconMap } from '@/constants/devices'
 
 const route = useRoute()
@@ -476,7 +519,8 @@ const device = ref(null)
 const showTerminal = ref(false)
 const sshPort = ref(22)
 
-const form = reactive({ display_name: '', name: '', device_type: '', icon: '', ip_type: '', attributes: {} })
+const allDevices = ref([])
+const form = reactive({ display_name: '', name: '', device_type: '', icon: '', ip_type: '', parent_id: null, attributes: {} })
 
 const isScanning = ref(false)
 const history = ref([])
@@ -488,15 +532,14 @@ const { notifySuccess, notifyError } = useNotifications()
 
 const isCategoryOpen = ref(false)
 const isIPOpen = ref(false)
+const isParentOpen = ref(false)
 const categorySearch = ref('')
 const iconSearch = ref('')
+const parentSearch = ref('')
 
 
 
-const getIconComponent = (name) => {
-  if (!name) return LucideIcons.HelpCircle
-  return LucideIcons[name] || LucideIcons.HelpCircle
-}
+// getIcon is now imported from @/utils/icons
 
 const filteredDeviceTypes = computed(() => {
   if (!categorySearch.value) return deviceTypes
@@ -506,6 +549,23 @@ const filteredDeviceTypes = computed(() => {
 const filteredIcons = computed(() => {
   if (!iconSearch.value) return availableIcons
   return availableIcons.filter(k => k.toLowerCase().includes(iconSearch.value.toLowerCase()))
+})
+
+const filteredPotentialParents = computed(() => {
+  const others = allDevices.value.filter(d => d.id !== device.value?.id)
+  if (!parentSearch.value) return others
+  const s = parentSearch.value.toLowerCase()
+  return others.filter(d =>
+    (d.display_name || '').toLowerCase().includes(s) ||
+    (d.name || '').toLowerCase().includes(s) ||
+    (d.ip || '').includes(s)
+  )
+})
+
+const getParentLabel = computed(() => {
+  if (!form.parent_id) return 'Main Gateway (Default)'
+  const p = allDevices.value.find(d => d.id === form.parent_id)
+  return p ? (p.display_name || p.name || p.ip) : 'Unknown Device'
 })
 
 watch(() => form.device_type, (newType) => {
@@ -546,6 +606,15 @@ const approveDevice = async () => {
   }
 }
 
+const fetchAllDevices = async () => {
+  try {
+    const res = await axios.get('/api/v1/devices/?limit=-1')
+    allDevices.value = res.data.items || []
+  } catch (e) {
+    console.error('Failed to fetch devices:', e)
+  }
+}
+
 const fetchHistory = async () => {
   try {
     const offset = (historyPage.value - 1) * historyLimit.value
@@ -576,6 +645,7 @@ const changeHistoryPage = (newPage) => {
 onMounted(() => {
   fetchDevice()
   fetchHistory()
+  fetchAllDevices()
 })
 
 
@@ -891,29 +961,33 @@ const openSSH = (port) => {
 
 const fetchDevice = async () => {
   try {
-    const res = await axios.get(`/api/v1/devices/${route.params.id}`)
-    device.value = res.data
-    form.display_name = device.value.display_name
-    form.name = device.value.name
-    form.device_type = device.value.device_type || 'Unknown'
-    form.icon = device.value.icon || 'HelpCircle'
-    form.ip_type = device.value.ip_type || 'dynamic'
-    // Initialize attributes if missing
-    form.attributes = device.value.attributes || {}
-  } catch (e) {
-    console.error(e)
+    const response = await axios.get(`/api/v1/devices/${route.params.id}`)
+    device.value = response.data
+    Object.assign(form, {
+      display_name: device.value.display_name || '',
+      name: device.value.name || '',
+      device_type: device.value.device_type || '',
+      icon: device.value.icon || '',
+      ip_type: device.value.ip_type || 'dynamic',
+      parent_id: device.value.parent_id || null,
+      attributes: device.value.attributes || {}
+    })
+  } catch (error) {
+    console.error('Failed to fetch device details', error)
   }
 }
 
 const saveChanges = async () => {
   try {
-    await axios.put(`/api/v1/devices/${device.value.id}`, form)
-    notifySuccess('Changes saved')
-    fetchDevice()
+    await axios.patch(`/api/v1/devices/${route.params.id}`, form)
+    notifySuccess('Device configuration updated')
+    await fetchDevice()
+    fetchAllDevices() // Refresh list for parent labels elsewhere if needed
   } catch (e) {
-    notifyError('Failed to save: ' + (e.response?.data?.detail || e.message))
+    notifyError('Failed to save changes')
   }
 }
 
 
 </script>
+```

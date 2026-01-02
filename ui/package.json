@@ -15,10 +15,12 @@
         "@xterm/xterm": "^6.0.0",
         "apexcharts": "^5.3.6",
         "axios": "^1.6.0",
+        "d3-force": "^3.0.0",
         "date-fns": "^4.1.0",
         "lucide-vue-next": "^0.562.0",
         "luxon": "^3.7.2",
         "pinia": "^2.1.0",
+        "v-network-graph": "^0.9.21",
         "vue": "^3.4.0",
         "vue-router": "^4.2.0",
         "vue3-apexcharts": "^1.10.0"

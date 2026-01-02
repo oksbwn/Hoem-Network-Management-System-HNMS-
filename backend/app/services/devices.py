@@ -274,7 +274,7 @@ async def update_device_fields(device_id: str, fields: Dict[str, Any]) -> Option
             row = conn.execute("SELECT id, ip, mac, name, display_name, device_type, vendor, icon, status, ip_type, first_seen, last_seen, is_trusted FROM devices WHERE id = ?", [device_id]).fetchone()
             if not row: return None
             
-            valid_cols = {'display_name', 'device_type', 'icon', 'attributes', 'ip_type', 'is_trusted'}
+            valid_cols = {'display_name', 'device_type', 'icon', 'attributes', 'ip_type', 'is_trusted', 'parent_id'}
             updates = []
             params = []
             for k, v in fields.items():

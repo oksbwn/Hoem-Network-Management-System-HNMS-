@@ -157,7 +157,7 @@ async def list_devices(
     sort_by: Annotated[str, Query()] = "ip",
     sort_order: Annotated[str, Query()] = "asc",
     page: Annotated[int, Query(ge=1)] = 1,
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    limit: Annotated[int, Query(ge=-1)] = 20,
 ):
     return await _internal_list_devices(
         device_type=device_type, 

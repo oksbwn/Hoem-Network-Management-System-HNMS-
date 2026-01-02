@@ -20,7 +20,17 @@ from app.core.logging import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Network Scanner API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Allow all origins for dev
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def cleanup_stale_scans():
     from app.core.db import get_connection
@@ -65,5 +75,8 @@ app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["analytic
 
 from app.routers.logs import router as logs_router
 app.include_router(logs_router, prefix="/api/v1/logs", tags=["logs"])
+
+from app.routers.topology import router as topology_router
+app.include_router(topology_router, prefix="/api/v1/topology", tags=["topology"])
 
 

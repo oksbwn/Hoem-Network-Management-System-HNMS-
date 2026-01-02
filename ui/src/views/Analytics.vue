@@ -219,8 +219,10 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
-import * as LucideIcons from 'lucide-vue-next'
-const { Router, Settings, Download, Upload, Users, Activity } = LucideIcons
+import { getIcon } from '@/utils/icons'
+import {
+    Router, Settings, Download, Upload, Users, Activity
+} from 'lucide-vue-next'
 import { formatBytes } from '@/utils/format'
 
 const loading = ref(true)
@@ -236,10 +238,7 @@ const categorySeries = ref([])
 const typeSeries = ref([])
 const heatmapSeries = ref([])
 
-// Icon Helper
-const getIcon = (name) => {
-    // ... existing getIcon ...
-}
+// getIcon is now imported from @/utils/icons
 
 // ...
 

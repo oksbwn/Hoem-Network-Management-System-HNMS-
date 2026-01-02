@@ -100,6 +100,10 @@ def migrate_db(conn: duckdb.DuckDBPyConnection) -> None:
         print("Migration: Adding 'is_trusted' column to 'devices'")
         conn.execute("ALTER TABLE devices ADD COLUMN is_trusted BOOLEAN DEFAULT FALSE")
 
+    if 'parent_id' not in col_names:
+        print("Migration: Adding 'parent_id' column to 'devices'")
+        conn.execute("ALTER TABLE devices ADD COLUMN parent_id TEXT")
+
     # Ensure device_status_history table exists
     conn.execute("""
         CREATE TABLE IF NOT EXISTS device_status_history (

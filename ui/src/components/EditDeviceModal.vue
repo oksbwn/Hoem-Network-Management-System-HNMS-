@@ -44,7 +44,7 @@
                                         <PopoverButton
                                             class="w-full flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all group">
                                             <span class="truncate">{{ form.device_type || 'Select Category' }}</span>
-                                            <LucideIcons.ChevronDown
+                                            <ChevronDown
                                                 class="h-4 w-4 text-slate-400 transition-transform duration-200"
                                                 :class="{ 'rotate-180': open }" />
                                         </PopoverButton>
@@ -60,7 +60,7 @@
                                                 <div class="p-2 border-b border-slate-100 dark:border-slate-700/50">
                                                     <div
                                                         class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-900/50 rounded-lg">
-                                                        <LucideIcons.Search class="w-3.5 h-3.5 text-slate-400" />
+                                                        <Search class="w-3.5 h-3.5 text-slate-400" />
                                                         <input v-model="categorySearch" type="text"
                                                             placeholder="Search..."
                                                             class="bg-transparent border-none outline-none text-xs text-slate-700 dark:text-slate-200 w-full placeholder:text-slate-400" />
@@ -92,11 +92,10 @@
                                         <PopoverButton
                                             class="w-full flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all group">
                                             <div class="flex items-center gap-3">
-                                                <component :is="getIconComponent(form.icon)"
-                                                    class="h-5 w-5 text-blue-500" />
+                                                <component :is="getIcon(form.icon)" class="h-5 w-5 text-blue-500" />
                                                 <span class="text-sm">{{ form.icon || 'Select Icon' }}</span>
                                             </div>
-                                            <LucideIcons.ChevronDown
+                                            <ChevronDown
                                                 class="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
                                         </PopoverButton>
 
@@ -114,7 +113,59 @@
                                                         @click="form.icon = icon"
                                                         class="p-3 rounded-lg flex items-center justify-center transition-all"
                                                         :class="form.icon === icon ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500'">
-                                                        <component :is="getIconComponent(icon)" class="h-5 w-5" />
+                                                        <component :is="getIcon(icon)" class="h-5 w-5" />
+                                                    </button>
+                                                </div>
+                                            </PopoverPanel>
+                                        </transition>
+                                    </Popover>
+                                </div>
+
+                                <!-- Parent Device Selection -->
+                                <div>
+                                    <label
+                                        class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Connected
+                                        Via (Parent)</label>
+                                    <Popover class="relative" v-slot="{ open, close }">
+                                        <PopoverButton
+                                            class="w-full flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all group">
+                                            <span class="truncate">{{ getParentLabel }}</span>
+                                            <ChevronDown
+                                                class="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-colors"
+                                                :class="{ 'rotate-180': open }" />
+                                        </PopoverButton>
+
+                                        <transition enter-active-class="transition duration-200 ease-out"
+                                            enter-from-class="translate-y-1 opacity-0"
+                                            enter-to-class="translate-y-0 opacity-100"
+                                            leave-active-class="transition duration-150 ease-in"
+                                            leave-from-class="translate-y-0 opacity-100"
+                                            leave-to-class="translate-y-1 opacity-0">
+                                            <PopoverPanel
+                                                class="absolute z-50 bottom-full mb-2 right-0 w-[280px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden focus:outline-none">
+                                                <div class="p-2 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <div
+                                                        class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-900/50 rounded-lg">
+                                                        <Search class="w-3.5 h-3.5 text-slate-400" />
+                                                        <input v-model="parentSearch" @click.stop type="text"
+                                                            placeholder="Search devices..."
+                                                            class="bg-transparent border-none outline-none text-xs text-slate-700 dark:text-slate-200 w-full placeholder:text-slate-400" />
+                                                    </div>
+                                                </div>
+                                                <div class="max-h-48 overflow-y-auto custom-scrollbar p-1">
+                                                    <button type="button" @click="form.parent_id = null; close()"
+                                                        class="w-full flex items-center px-4 py-2 text-sm text-left rounded-lg hover:bg-blue-600 hover:text-white transition-colors"
+                                                        :class="!form.parent_id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'">
+                                                        Main Gateway (Default)
+                                                    </button>
+                                                    <button v-for="d in filteredPotentialParents" :key="d.id"
+                                                        type="button" @click="form.parent_id = d.id; close()"
+                                                        class="w-full flex items-center gap-2 px-4 py-2 text-sm text-left rounded-lg hover:bg-blue-600 hover:text-white transition-colors"
+                                                        :class="form.parent_id === d.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'">
+                                                        <component :is="getIcon(d.icon)"
+                                                            class="w-4 h-4 mr-2 opacity-70" />
+                                                        <span class="truncate">{{ d.display_name || d.name || d.ip
+                                                        }}</span>
                                                     </button>
                                                 </div>
                                             </PopoverPanel>
@@ -144,7 +195,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import {
     TransitionRoot,
     TransitionChild,
@@ -155,8 +206,13 @@ import {
     PopoverButton,
     PopoverPanel
 } from '@headlessui/vue'
-import * as LucideIcons from 'lucide-vue-next'
+import {
+    Search,
+    ChevronDown,
+    Loader2
+} from 'lucide-vue-next'
 import axios from 'axios'
+import { getIcon } from '@/utils/icons'
 import { deviceTypes, availableIcons, typeToIconMap } from '@/constants/devices'
 
 const props = defineProps({
@@ -167,11 +223,14 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save'])
 
 const isSaving = ref(false)
+const allDevices = ref([])
+const parentSearch = ref('')
 
 const form = ref({
     display_name: '',
     device_type: '',
-    icon: ''
+    icon: '',
+    parent_id: null
 })
 
 const categorySearch = ref('')
@@ -181,44 +240,51 @@ const filteredDeviceTypes = computed(() => {
     return deviceTypes.filter(t => t.toLowerCase().includes(categorySearch.value.toLowerCase()))
 })
 
+const filteredPotentialParents = computed(() => {
+    const others = allDevices.value.filter(d => d.id !== props.device?.id)
+    if (!parentSearch.value) return others
+    const s = parentSearch.value.toLowerCase()
+    return others.filter(d =>
+        (d.display_name || '').toLowerCase().includes(s) ||
+        (d.name || '').toLowerCase().includes(s) ||
+        (d.ip || '').includes(s)
+    )
+})
+
+const getParentLabel = computed(() => {
+    if (!form.value.parent_id) return 'Main Gateway (Default)'
+    const p = allDevices.value.find(d => d.id === form.value.parent_id)
+    return p ? (p.display_name || p.name || p.ip) : 'Unknown Device'
+})
+
 watch(() => form.value.device_type, (newType) => {
     if (newType && typeToIconMap[newType]) {
         form.value.icon = typeToIconMap[newType]
     }
 })
 
-const getIconComponent = (name) => {
-    // If name is kebab-case (legacy), convert to PascalCase
-    // But now we prefer PascalCase Lucide names directly
-    if (!name) return LucideIcons.HelpCircle
+// getIcon is now imported from @/utils/icons
 
-    // Direct match
-    if (LucideIcons[name]) return LucideIcons[name]
-
-    // Try PascalCase conversion if user has legacy data
-    const camel = name.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
-    if (LucideIcons[camel]) return LucideIcons[camel]
-
-    // Explicit legacy mappings if needed (e.g. computer-desktop -> Monitor)
-    const legacyMap = {
-        'computer-desktop': 'Monitor',
-        'device-laptop': 'Laptop',
-        'device-phone-mobile': 'Smartphone',
-        'device-tablet': 'Tablet',
-        'server-stack': 'Database',
-        'bolt': 'Zap'
+const fetchAllDevices = async () => {
+    try {
+        const res = await axios.get('/api/v1/devices/?limit=-1')
+        allDevices.value = res.data.items || []
+    } catch (e) {
+        console.error('Failed to fetch devices:', e)
     }
-    if (legacyMap[name]) return LucideIcons[legacyMap[name]] || LucideIcons.HelpCircle
-
-    return LucideIcons.HelpCircle
 }
+
+onMounted(() => {
+    fetchAllDevices()
+})
 
 watch(() => props.device, (newVal) => {
     if (newVal) {
         form.value = {
             display_name: newVal.display_name || newVal.name || '',
             device_type: newVal.device_type || 'unknown',
-            icon: newVal.icon || 'help-circle'
+            icon: newVal.icon || 'help-circle',
+            parent_id: newVal.parent_id || null
         }
     }
 }, { immediate: true })

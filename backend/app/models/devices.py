@@ -14,6 +14,7 @@ class DeviceRead(BaseModel):
     vendor: Optional[str] = None
     icon: Optional[str] = None
     status: Optional[str] = "unknown"
+    is_trusted: bool = False
     ip_type: Optional[str] = None
     open_ports: Optional[list] = []
     attributes: Optional[dict] = {}
@@ -26,6 +27,7 @@ class DeviceUpdate(BaseModel):
     vendor: Optional[str] = None
     icon: Optional[str] = None
     ip_type: Optional[str] = None
+    is_trusted: Optional[bool] = None
     attributes: Optional[dict] = None
 
 class PaginatedDevicesResponse(BaseModel):

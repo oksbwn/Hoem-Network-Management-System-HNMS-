@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS devices (
     internet_path TEXT,
     vendor        TEXT,
     icon          TEXT,
+    is_trusted    BOOLEAN DEFAULT FALSE,
     status TEXT DEFAULT 'unknown',
     ip_type       TEXT,
     open_ports    TEXT,

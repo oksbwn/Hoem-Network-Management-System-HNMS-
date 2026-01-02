@@ -13,6 +13,7 @@
             <h1 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">
               {{ form.display_name || device.name || 'Unnamed Device' }}
             </h1>
+            <ShieldCheck v-if="device.is_trusted" class="w-5 h-5 text-emerald-500" v-tooltip="'Verified & Trusted'" />
             <div :class="[
               device.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400',
               'w-2 h-2 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]'
@@ -44,6 +45,25 @@
 
       <!-- Column 1 & 2: Main Info -->
       <div class="lg:col-span-2 space-y-6">
+
+        <!-- Approval Banner -->
+        <div v-if="!device.is_trusted"
+          class="relative overflow-hidden rounded-3xl bg-red-500 dark:bg-red-600 p-6 shadow-xl text-white">
+          <div class="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
+          <div class="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <ShieldAlert class="w-10 h-10 text-white/90" />
+              <div>
+                <h2 class="text-lg font-bold">Untrusted Device</h2>
+                <p class="text-sm text-red-100 font-medium">This device has not been verified yet.</p>
+              </div>
+            </div>
+            <button @click="approveDevice"
+              class="px-5 py-2.5 bg-white text-red-600 font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
+              <ShieldCheck class="w-5 h-5" /> Approve
+            </button>
+          </div>
+        </div>
 
         <!-- Device Info Card -->
         <div
@@ -441,7 +461,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue'
 import * as LucideIcons from 'lucide-vue-next'
 import { ref, onMounted, reactive, computed, watch } from 'vue'
 import {
-  ArrowLeft, Loader2, Scan, Save, Search, ChevronDown, Activity, Terminal, ExternalLink, ShieldAlert,
+  ArrowLeft, Loader2, Scan, Save, Search, ChevronDown, Activity, Terminal, ExternalLink, ShieldAlert, ShieldCheck,
   Wifi, WifiOff
 } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
@@ -516,7 +536,15 @@ const getIPAllocationLabel = (val) => {
   return 'Dynamic (DHCP)'
 }
 
-// ... existing code ...
+const approveDevice = async () => {
+  try {
+    await axios.patch(`/api/v1/devices/${device.value.id}`, { is_trusted: true })
+    await fetchDevice()
+    notifySuccess('Device approved successfully')
+  } catch (e) {
+    notifyError('Failed to approve device')
+  }
+}
 
 const fetchHistory = async () => {
   try {

@@ -241,10 +241,10 @@ async def update_device_fields(device_id: str, fields: Dict[str, Any]) -> Option
     def sync_update():
         conn = get_connection()
         try:
-            row = conn.execute("SELECT id, ip, mac, name, display_name, device_type, vendor, icon, status, ip_type, first_seen, last_seen FROM devices WHERE id = ?", [device_id]).fetchone()
+            row = conn.execute("SELECT id, ip, mac, name, display_name, device_type, vendor, icon, status, ip_type, first_seen, last_seen, is_trusted FROM devices WHERE id = ?", [device_id]).fetchone()
             if not row: return None
             
-            valid_cols = {'display_name', 'device_type', 'icon', 'attributes', 'ip_type'}
+            valid_cols = {'display_name', 'device_type', 'icon', 'attributes', 'ip_type', 'is_trusted'}
             updates = []
             params = []
             for k, v in fields.items():
@@ -257,7 +257,7 @@ async def update_device_fields(device_id: str, fields: Dict[str, Any]) -> Option
                 conn.execute(f"UPDATE devices SET {', '.join(updates)} WHERE id = ?", params)
                 conn.commit()
             
-            updated = conn.execute("SELECT id, ip, mac, name, display_name, device_type, vendor, icon, status, ip_type, first_seen, last_seen FROM devices WHERE id = ?", [device_id]).fetchone()
+            updated = conn.execute("SELECT id, ip, mac, name, display_name, device_type, vendor, icon, status, ip_type, first_seen, last_seen, is_trusted FROM devices WHERE id = ?", [device_id]).fetchone()
             return updated
         finally:
             conn.close()
@@ -268,5 +268,6 @@ async def update_device_fields(device_id: str, fields: Dict[str, Any]) -> Option
     return {
         "id": updated[0], "ip": updated[1], "mac": updated[2], "name": updated[3],
         "display_name": updated[4], "device_type": updated[5], "vendor": updated[6],
-        "icon": updated[7], "status": updated[8], "ip_type": updated[9], "first_seen": updated[10], "last_seen": updated[11]
+        "icon": updated[7], "status": updated[8], "ip_type": updated[9], "first_seen": updated[10], "last_seen": updated[11],
+        "is_trusted": updated[12]
     }

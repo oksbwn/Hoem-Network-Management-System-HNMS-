@@ -58,7 +58,7 @@ async def _internal_list_devices(
             # Now fetch the data
             base_sql = """
                 SELECT id, ip, mac, name, display_name, device_type,
-                       first_seen, last_seen, vendor, icon, open_ports, status, ip_type, attributes
+                       first_seen, last_seen, vendor, icon, open_ports, status, ip_type, attributes, is_trusted
                 FROM devices
             """
             if clauses:
@@ -120,6 +120,7 @@ async def _internal_list_devices(
                     status=r[11],
                     ip_type=r[12],
                     attributes=json.loads(r[13]) if r[13] else {},
+                    is_trusted=r[14] if r[14] is not None else False,
                     traffic_history=traffic_map.get(r[0], [])
                 )
                 for r in rows
@@ -170,7 +171,7 @@ async def get_device(device_id: str):
             row = conn.execute(
                 """
                 SELECT id, ip, mac, name, display_name, device_type,
-                       first_seen, last_seen, vendor, icon, open_ports, status, ip_type, attributes
+                       first_seen, last_seen, vendor, icon, open_ports, status, ip_type, attributes, is_trusted
                 FROM devices WHERE id = ?
                 """,
                 [device_id],
@@ -197,6 +198,7 @@ async def get_device(device_id: str):
                 open_ports=detailed_ports, status=row[11],
                 ip_type=row[12],
                 attributes=json.loads(row[13]) if row[13] else {},
+                is_trusted=row[14] if row[14] is not None else False,
                 traffic_history=traffic
             )
         finally:
@@ -242,12 +244,12 @@ async def import_devices(devices_data: List[DeviceRead]):
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO devices 
-                    (id, ip, mac, name, display_name, device_type, first_seen, last_seen, vendor, icon, status, ip_type, open_ports, attributes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, ip, mac, name, display_name, device_type, first_seen, last_seen, vendor, icon, status, ip_type, open_ports, attributes, is_trusted)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     [
                         d.id, d.ip, d.mac, d.name, d.display_name, d.device_type,
-                        d.first_seen, d.last_seen, d.vendor, d.icon, d.status, d.ip_type, json.dumps(d.open_ports), attrs_raw
+                        d.first_seen, d.last_seen, d.vendor, d.icon, d.status, d.ip_type, json.dumps(d.open_ports), attrs_raw, d.is_trusted
                     ]
                 )
                 count += 1

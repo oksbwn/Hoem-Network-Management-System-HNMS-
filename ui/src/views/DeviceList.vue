@@ -197,7 +197,8 @@
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
             <template v-for="device in devices" :key="device.id">
               <tr @click="$router.push({ name: 'DeviceDetails', params: { id: device.id } })"
-                class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group">
+                class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
+                :class="{ '!bg-red-50/30 dark:!bg-red-900/20': !device.is_trusted }">
                 <td class="px-3 py-4">
                   <div class="flex items-center gap-3">
                     <button @click.stop="toggleRow(device.id)"
@@ -228,6 +229,14 @@
                             ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
                             : 'bg-amber-50 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400 border-amber-100 dark:border-amber-800'">
                           {{ device.ip_type }}
+                        </span>
+                        <span v-if="!device.is_trusted"
+                          class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 flex items-center gap-1">
+                          <ShieldAlert class="h-3 w-3" /> Untrusted
+                        </span>
+                        <span v-else
+                          class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                          <ShieldCheck class="h-3 w-3" /> Trusted
                         </span>
                       </div>
                     </div>
@@ -268,6 +277,11 @@
                 </td>
                 <td class="px-3 py-4 text-right hidden md:table-cell" @click.stop>
                   <div class="flex items-center justify-end gap-1">
+                    <button v-if="!device.is_trusted" @click.stop="approveDevice(device)"
+                      class="p-1.5 text-red-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
+                      v-tooltip="'Approve Device'">
+                      <ShieldCheck class="h-4 w-4" />
+                    </button>
                     <router-link :to="{ name: 'DeviceDetails', params: { id: device.id } }"
                       class="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all"
                       v-tooltip="'View Device Details'">
@@ -419,7 +433,7 @@ import Sparkline from '@/components/Sparkline.vue'
 import TrafficSparkline from '@/components/TrafficSparkline.vue'
 import EditDeviceModal from '@/components/EditDeviceModal.vue'
 import * as LucideIcons from 'lucide-vue-next'
-const { Eye, Pencil, Trash2, Download, Upload, RefreshCw, Loader2, Search, ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, Activity, Wifi, Database, ZapOff, Ticket, Filter, Layers } = LucideIcons
+const { Eye, Pencil, Trash2, Download, Upload, RefreshCw, Loader2, Search, ChevronUp, ChevronDown, ChevronRight, ArrowUpDown, Activity, Wifi, Database, ZapOff, Ticket, Filter, Layers, ShieldCheck, ShieldAlert } = LucideIcons
 import { formatRelativeTime } from '@/utils/date'
 
 const devices = ref([])
@@ -649,6 +663,17 @@ const triggerScan = async () => {
     error.value = 'Scan failed'
   } finally {
     isScanning.value = false
+  }
+}
+
+const approveDevice = async (device) => {
+  try {
+    await axios.patch(`/api/v1/devices/${device.id}`, { is_trusted: true })
+    await fetchDevices()
+    successMessage.value = 'Device approved successfully'
+    setTimeout(() => successMessage.value = '', 3000)
+  } catch (e) {
+    error.value = 'Failed to approve device'
   }
 }
 

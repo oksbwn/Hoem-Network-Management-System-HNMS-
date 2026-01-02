@@ -24,12 +24,22 @@ async def scheduler_loop():
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 async def scan_runner_loop():
+    last_cleanup = datetime.min.replace(tzinfo=timezone.utc)
     while True:
         try:
-            await handle_queued_scans()
+            now = datetime.now(timezone.utc)
+            # Only cleanup stale scans every 60 seconds
+            run_cleanup = (now - last_cleanup).total_seconds() > 60
+            
+            job = await handle_queued_scans(cleanup=run_cleanup)
+            if run_cleanup:
+                last_cleanup = now
+                
         except Exception as e:
             logger.error(f"Error in scan_runner_loop: {e}")
-        await asyncio.sleep(1)
+            
+        # Sleep 2s to reduce idle CPU (responsiveness is still good enough)
+        await asyncio.sleep(2)
 
 async def handle_schedules():
     def sync_check():
@@ -195,17 +205,19 @@ async def enqueue_scan(target: str, scan_type: str) -> Optional[str]:
             conn.close()
     return await asyncio.to_thread(sync_enqueue)
 
-async def handle_queued_scans():
+async def handle_queued_scans(cleanup=False):
     def get_job():
         conn = get_connection()
         try:
             now = datetime.now(timezone.utc)
-            # Re-clean stale scans (interrupted)
-            stale_cutoff = now - timedelta(minutes=20)
-            conn.execute(
-                "UPDATE scans SET status='error', finished_at=?, error_message='Job timed out or interrupted' WHERE status='running' AND started_at < ?", 
-                [now, stale_cutoff]
-            )
+            
+            if cleanup:
+                # Re-clean stale scans (interrupted)
+                stale_cutoff = now - timedelta(minutes=20)
+                conn.execute(
+                    "UPDATE scans SET status='error', finished_at=?, error_message='Job timed out or interrupted' WHERE status='running' AND started_at < ?", 
+                    [now, stale_cutoff]
+                )
             
             # One scan at a time for stability on Pi
             running = conn.execute("SELECT id FROM scans WHERE status = 'running'").fetchone()

@@ -178,6 +178,19 @@ def migrate_db(conn: duckdb.DuckDBPyConnection) -> None:
     except Exception as e:
         print(f"Migration error (normalization): {e}")
 
+    # 4. Indexes for Performance (Idempotent)
+    # DuckDB CREATE INDEX IF NOT EXISTS is supported in newer versions, checking explicitly or using try/except block is safer if unsure of version match
+    try:
+        print("Migration: Checking/Creating indexes...")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_history_device_id ON device_status_history(device_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_history_changed_at ON device_status_history(changed_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_traffic_device_id ON device_traffic_history(device_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_traffic_timestamp ON device_traffic_history(timestamp)")
+        # Also index devices table for faster lookups if not primary key (id is PK, so indexed)
+        # conn.execute("CREATE INDEX IF NOT EXISTS idx_devices_mac ON devices(mac)") # mac is part of logic but often via ID.
+    except Exception as e:
+        print(f"Migration error (indexes): {e}")
+
 
 
     conn.commit()

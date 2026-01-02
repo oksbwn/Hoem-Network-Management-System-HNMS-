@@ -103,7 +103,8 @@ import {
   ListBulletIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  BellIcon
+  BellIcon,
+  ChartBarIcon
 } from '@heroicons/vue/24/outline'
 
 const sidebarCollapsed = ref(true)
@@ -115,6 +116,7 @@ const navItems = [
   { name: 'Devices', path: '/devices', icon: ComputerDesktopIcon },
   { name: 'Scan History', path: '/scans', icon: ListBulletIcon },
   { name: 'Events', path: '/events', icon: BellIcon },
+  { name: 'Analytics', path: '/analytics', icon: ChartBarIcon },
   { name: 'IP Occupancy', path: '/occupancy', icon: TableCellsIcon },
   { name: 'Settings', path: '/settings', icon: Cog6ToothIcon },
 ]

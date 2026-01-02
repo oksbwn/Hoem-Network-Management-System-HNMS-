@@ -1,7 +1,7 @@
 export const deviceTypes = [
     'Desktop', 'Laptop', 'Mobile', 'Tablet', 'Wall Panel', 'Server', 'Printer', 'Monitor',
     'Router', 'Switch', 'Access Point', 'Gateway', 'Firewall', 'NAS',
-    'Smart Plug', 'Smart Bulb', 'Smart Switch', 'Thermostat', 'Camera', 'Door Lock', 'Sensor',
+    'Smart Plug', 'Smart Bulb', 'Smart Switch', 'Smart Speaker', 'Thermostat', 'Camera', 'Door Lock', 'Sensor',
     'TV', 'Speaker', 'Game Console', 'Media Player', 'Wearable', 'Vehicle',
     'IoT (Generic)', 'Unknown'
 ]
@@ -32,6 +32,7 @@ export const typeToIconMap = {
     'Smart Plug': 'Zap',
     'Smart Bulb': 'Lightbulb',
     'Smart Switch': 'Sliders',
+    'Smart Speaker': 'Speaker',
     'Thermostat': 'Home',
     'Camera': 'Video',
     'Door Lock': 'Lock',

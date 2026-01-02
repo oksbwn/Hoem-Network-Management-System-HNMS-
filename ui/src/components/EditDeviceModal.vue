@@ -174,13 +174,11 @@ const form = ref({
     icon: ''
 })
 
-icon: ''
-})
-
 const categorySearch = ref('')
 
-if (!categorySearch.value) return deviceTypes
-return deviceTypes.filter(t => t.toLowerCase().includes(categorySearch.value.toLowerCase()))
+const filteredDeviceTypes = computed(() => {
+    if (!categorySearch.value) return deviceTypes
+    return deviceTypes.filter(t => t.toLowerCase().includes(categorySearch.value.toLowerCase()))
 })
 
 watch(() => form.value.device_type, (newType) => {

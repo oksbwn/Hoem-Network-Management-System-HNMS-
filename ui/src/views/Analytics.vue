@@ -71,7 +71,7 @@
                     <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                         Total Download</p>
                     <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatBytes(trafficTotals.download)
-                    }}</p>
+                        }}</p>
                 </div>
                 <div
                     class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
@@ -121,6 +121,14 @@
                         Hour</p>
                     <div class="h-[350px]">
                         <apexchart type="heatmap" height="100%" :options="heatmapOptions" :series="heatmapSeries" />
+                    </div>
+                    <!-- Custom Gradient Legend -->
+                    <div class="mt-4 flex items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                        <span>Low (Green)</span>
+                        <div
+                            class="w-64 h-3 rounded-full bg-gradient-to-r from-[#10b981] via-[#f59e0b] to-[#ef4444] relative shadow-sm border border-slate-200 dark:border-slate-700">
+                        </div>
+                        <span>High (Red)</span>
                     </div>
                 </div>
             </div>
@@ -309,6 +317,54 @@ const fetchData = async () => {
         // Process Heatmap
         heatmapSeries.value = heatRes.data
 
+        // Dynamic Color Scale Logic
+        let maxVal = 0
+        heatRes.data.forEach(d => {
+            d.data.forEach(p => {
+                if (p.y > maxVal) maxVal = p.y
+            })
+        })
+
+        if (maxVal > 0) {
+            // Gradient Scale: 10 steps from Green -> Yellow -> Orange -> Red
+            // Plus specific 0 handling
+            const colors = [
+                '#10b981', '#34d399', '#6ee7b7', // Greens
+                '#a3e635', '#facc15', '#f59e0b', // Yellows/Oranges
+                '#fb923c', '#f87171', '#ef4444', '#dc2626' // Reds
+            ]
+
+            const ranges = []
+
+            // Zero value (light/transparent)
+            ranges.push({ from: 0, to: 0, color: '#f1f5f9', name: '0 B' })
+
+            // Positive values divided into 10 buckets
+            const step = maxVal / 10
+            for (let i = 0; i < 10; i++) {
+                ranges.push({
+                    from: (i * step) + (i === 0 ? 0.000001 : 0), // Start just above 0
+                    to: (i + 1) * step,
+                    color: colors[i],
+                    name: i < 3 ? 'Low' : (i < 7 ? 'Med' : 'High')
+                })
+            }
+
+            heatmapOptions.value = {
+                ...heatmapOptions.value,
+                legend: { show: false }, // Hide default messy legend
+                plotOptions: {
+                    ...heatmapOptions.value.plotOptions,
+                    heatmap: {
+                        ...heatmapOptions.value.plotOptions.heatmap,
+                        colorScale: {
+                            ranges: ranges
+                        }
+                    }
+                }
+            }
+        }
+
         // Update Options
         updateChartOptions(distRes.data, topRes.data, catRes.data)
 
@@ -373,26 +429,86 @@ const heatmapOptions = ref({
     ...commonOptions,
     chart: { type: 'heatmap', fontFamily: 'inherit', toolbar: { show: false } },
     dataLabels: { enabled: false },
-    colors: ["#3b82f6"],
+    legend: { position: 'right', offsetY: 50 }, // Scale beside chart
     plotOptions: {
         heatmap: {
             shadeIntensity: 0.5,
             radius: 4,
             useFillColorAsStroke: false,
             colorScale: {
-                // Auto scaling usually works best unless we know max logic
+                ranges: [] // Dynamic based on data
             }
         }
     },
-    stroke: { show: true, width: 1, colors: ['#fff'] }, // Grid grid between blocks
-    tooltip: {
-        theme: 'dark',
-        y: { formatter: (val) => formatBytes(val) }
-    },
+    stroke: { show: true, width: 1, colors: ['#fff'] },
     xaxis: {
         type: 'category',
         tooltip: { enabled: false },
-        labels: { rotate: -45 }
+        labels: {
+            rotate: -45,
+            formatter: (val) => {
+                // Show label only every 3 hours (00, 03, 06...)
+                if (typeof val === 'string') {
+                    const h = parseInt(val.split(':')[0])
+                    if (!isNaN(h) && h % 3 === 0) return val
+                    return ''
+                }
+                return val
+            }
+        },
+        axisTicks: { show: false } // Hide ticks for cleaner look
+    },
+    tooltip: {
+        custom: ({ series, seriesIndex, dataPointIndex, w }) => {
+            try {
+                // Defensive check to prevent crash
+                if (!w.config.series || !w.config.series[seriesIndex] || !w.config.series[seriesIndex].data[dataPointIndex]) {
+                    return ''
+                }
+
+                const data = w.config.series[seriesIndex].data[dataPointIndex]
+
+                // If data is just a number or null (fallback)
+                if (typeof data !== 'object' || data === null) {
+                    return `<div class="px-2 py-1 bg-slate-800 text-white text-xs">${data}</div>`
+                }
+
+                const val = formatBytes(data.y || 0)
+                const top = data.top || []
+
+                // Filter out devices with 0 usage
+                const activeTop = Array.isArray(top) ? top.filter(t => (t.value || 0) > 0) : []
+
+                let html = `
+                    <div class="px-3 py-2 bg-slate-800 text-white rounded shadow-lg border border-slate-700 text-xs font-sans z-50">
+                        <div class="font-bold mb-1 border-b border-slate-600 pb-1 flex justify-between gap-4">
+                            <span>${w.globals.seriesNames[seriesIndex]} ${data.x}</span>
+                            <span class="text-blue-400">${val}</span>
+                        </div>
+                `
+
+                if (activeTop.length > 0) {
+                    html += `<div class="space-y-1 mt-1">`
+                    activeTop.forEach(t => {
+                        html += `
+                            <div class="flex justify-between gap-3 text-[10px] text-slate-300">
+                                <span class="truncate max-w-[100px]">${t.name || 'Unknown'}</span>
+                                <span class="font-mono">${formatBytes(t.value || 0)}</span>
+                            </div>
+                        `
+                    })
+                    html += `</div>`
+                } else {
+                    html += `<div class="italic text-slate-500 text-[10px]">No activity</div>`
+                }
+
+                html += `</div>`
+                return html
+            } catch (e) {
+                console.error("Tooltip error", e)
+                return ''
+            }
+        }
     }
 })
 

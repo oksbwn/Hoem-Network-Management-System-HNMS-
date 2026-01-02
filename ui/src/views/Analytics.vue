@@ -71,7 +71,7 @@
                     <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                         Total Download</p>
                     <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatBytes(trafficTotals.download)
-                        }}</p>
+                    }}</p>
                 </div>
                 <div
                     class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
@@ -110,6 +110,17 @@
                     <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-6">Traffic Overview</h3>
                     <div class="h-[350px]">
                         <apexchart type="area" height="100%" :options="chartOptions" :series="chartSeries" />
+                    </div>
+                </div>
+
+                <!-- Usage Heatmap -->
+                <div
+                    class="lg:col-span-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                    <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-2">Usage Patterns</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Intensity of data consumption by Day and
+                        Hour</p>
+                    <div class="h-[350px]">
+                        <apexchart type="heatmap" height="100%" :options="heatmapOptions" :series="heatmapSeries" />
                     </div>
                 </div>
             </div>
@@ -215,25 +226,14 @@ const chartSeries = ref([])
 const vendorSeries = ref([])
 const categorySeries = ref([])
 const typeSeries = ref([])
+const heatmapSeries = ref([])
 
 // Icon Helper
 const getIcon = (name) => {
-    if (!name) return LucideIcons.HelpCircle
-    if (LucideIcons[name]) return LucideIcons[name]
-
-    const legacyMap = {
-        'smartphone': 'Smartphone', 'tablet': 'Tablet', 'laptop': 'Laptop', 'monitor': 'Monitor',
-        'server': 'Server', 'router': 'Router', 'network': 'Network', 'tv': 'Tv', 'printer': 'Printer',
-        'computer-desktop': 'Monitor', 'device-laptop': 'Laptop', 'device-phone-mobile': 'Smartphone',
-        'device-tablet': 'Tablet'
-    }
-    if (legacyMap[name] && LucideIcons[legacyMap[name]]) return LucideIcons[legacyMap[name]]
-
-    const camel = name.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
-    if (LucideIcons[camel]) return LucideIcons[camel]
-
-    return LucideIcons.HelpCircle
+    // ... existing getIcon ...
 }
+
+// ...
 
 // Check Config
 const checkConfig = async () => {
@@ -250,6 +250,27 @@ const usageTotalPages = ref(1)
 const usageDevices = ref([])
 const usageLoading = ref(false)
 
+const fetchUsageDetails = async () => {
+    usageLoading.value = true
+    try {
+        const res = await axios.get(`/api/v1/analytics/usage-details?range=${timeRange.value}&page=${usagePage.value}&limit=10`)
+        usageDevices.value = res.data.items || []
+        usageTotalPages.value = res.data.pages || 1
+    } catch (e) {
+        console.error("Failed to load usage details", e)
+    } finally {
+        usageLoading.value = false
+    }
+}
+
+const changeUsagePage = (delta) => {
+    const newPage = usagePage.value + delta
+    if (newPage >= 1 && newPage <= usageTotalPages.value) {
+        usagePage.value = newPage
+        fetchUsageDetails()
+    }
+}
+
 const fetchData = async () => {
     if (!localConfigured.value) {
         loading.value = false
@@ -259,11 +280,12 @@ const fetchData = async () => {
     loading.value = true
     try {
         // Parallel Fetch (Top Consumers Limit reduced to 5)
-        const [trafficRes, topRes, distRes, catRes] = await Promise.all([
+        const [trafficRes, topRes, distRes, catRes, heatRes] = await Promise.all([
             axios.get(`/api/v1/analytics/traffic?range=${timeRange.value}`),
             axios.get(`/api/v1/analytics/top-devices?range=${timeRange.value}&limit=5`),
             axios.get(`/api/v1/analytics/distribution?range=${timeRange.value}`),
-            axios.get(`/api/v1/analytics/category-usage?range=${timeRange.value}`)
+            axios.get(`/api/v1/analytics/category-usage?range=${timeRange.value}`),
+            axios.get(`/api/v1/analytics/heatmap?range=${timeRange.value}`)
         ])
 
         // Process Traffic
@@ -284,6 +306,9 @@ const fetchData = async () => {
         // Process Category Usage
         categorySeries.value = catRes.data.map(c => c.total)
 
+        // Process Heatmap
+        heatmapSeries.value = heatRes.data
+
         // Update Options
         updateChartOptions(distRes.data, topRes.data, catRes.data)
 
@@ -294,27 +319,6 @@ const fetchData = async () => {
         console.error("Failed to load analytics", e)
     } finally {
         loading.value = false
-    }
-}
-
-const fetchUsageDetails = async () => {
-    usageLoading.value = true
-    try {
-        const res = await axios.get(`/api/v1/analytics/usage-details?range=${timeRange.value}&page=${usagePage.value}&limit=10`)
-        usageDevices.value = res.data.items
-        usageTotalPages.value = res.data.pages
-    } catch (e) {
-        console.error("Failed to load usage details", e)
-    } finally {
-        usageLoading.value = false
-    }
-}
-
-const changeUsagePage = (delta) => {
-    const newPage = usagePage.value + delta
-    if (newPage >= 1 && newPage <= usageTotalPages.value) {
-        usagePage.value = newPage
-        fetchUsageDetails()
     }
 }
 
@@ -365,7 +369,35 @@ const categoryOptions = ref({
     }
 })
 
+const heatmapOptions = ref({
+    ...commonOptions,
+    chart: { type: 'heatmap', fontFamily: 'inherit', toolbar: { show: false } },
+    dataLabels: { enabled: false },
+    colors: ["#3b82f6"],
+    plotOptions: {
+        heatmap: {
+            shadeIntensity: 0.5,
+            radius: 4,
+            useFillColorAsStroke: false,
+            colorScale: {
+                // Auto scaling usually works best unless we know max logic
+            }
+        }
+    },
+    stroke: { show: true, width: 1, colors: ['#fff'] }, // Grid grid between blocks
+    tooltip: {
+        theme: 'dark',
+        y: { formatter: (val) => formatBytes(val) }
+    },
+    xaxis: {
+        type: 'category',
+        tooltip: { enabled: false },
+        labels: { rotate: -45 }
+    }
+})
+
 const barOptions = ref({
+    // ...
     ...commonOptions,
     chart: { type: 'bar', fontFamily: 'inherit', toolbar: { show: false } },
     xaxis: { categories: [], axisBorder: { show: false }, axisTicks: { show: false } },

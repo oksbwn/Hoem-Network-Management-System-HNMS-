@@ -249,6 +249,57 @@ def get_category_usage(range: str = "24h"):
     finally:
         conn.close()
 
+@router.get("/heatmap")
+def get_traffic_heatmap(time_range: str = Query("24h", alias="range")):
+    """
+    Returns aggregated traffic volume by Day of Week and Hour of Day.
+    """
+    conn = get_connection()
+    try:
+        start_time, end_time, _, _ = get_date_range(time_range)
+        
+        # DuckDB extraction: isodow (1=Mon, 7=Sun), hour (0-23)
+        sql = """
+            SELECT 
+                extract('isodow' from timestamp) as dow,
+                extract('hour' from timestamp) as h,
+                SUM(down_rate + up_rate) as total
+            FROM device_traffic_history
+            WHERE timestamp >= ? AND timestamp <= ?
+            GROUP BY dow, h
+            ORDER BY dow, h
+        """
+        
+        rows = conn.execute(sql, [start_time, end_time]).fetchall()
+        
+        # Initialize 7x24 matrix with 0
+        # data[day_index][hour_index]
+        matrix = [[0 for _ in range(24)] for _ in range(7)]
+        
+        for r in rows:
+            if r[0] is not None and r[1] is not None:
+                d_idx = int(r[0]) - 1 # 0-6
+                h_idx = int(r[1])     # 0-23
+                if 0 <= d_idx <= 6 and 0 <= h_idx <= 23:
+                    matrix[d_idx][h_idx] = r[2]
+
+        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        series = []
+        
+        # ApexCharts Heatmap renders series from top to bottom.
+        # So series[0] is top row. Commonly Heatmaps show Mon at top.
+        for i, day in enumerate(days):
+            data_points = []
+            for h in range(24):
+                val = matrix[i][h]
+                label = f"{h:02d}:00"
+                data_points.append({"x": label, "y": val})
+            series.append({"name": day, "data": data_points})
+            
+        return series
+    finally:
+        conn.close()
+
 def get_date_range(range_str: str, now: Optional[datetime] = None):
     if not now:
         now = datetime.now()

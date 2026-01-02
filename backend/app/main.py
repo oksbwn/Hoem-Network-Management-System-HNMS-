@@ -1,7 +1,4 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
 import asyncio
 import logging
 from app.core.db import init_db
@@ -69,17 +66,4 @@ app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["analytic
 from app.routers.logs import router as logs_router
 app.include_router(logs_router, prefix="/api/v1/logs", tags=["logs"])
 
-# SPA Static File Serving
-static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static")
 
-if os.path.exists(static_dir):
-    app.mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="assets")
-    
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        file_path = os.path.join(static_dir, full_path)
-        if os.path.isfile(file_path):
-            return FileResponse(file_path)
-        return FileResponse(os.path.join(static_dir, "index.html"))
-else:
-    logger.warning(f"Static directory not found at {static_dir}. UI will not be served.")

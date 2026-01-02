@@ -186,6 +186,12 @@ def migrate_db(conn: duckdb.DuckDBPyConnection) -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_history_changed_at ON device_status_history(changed_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_traffic_device_id ON device_traffic_history(device_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_traffic_timestamp ON device_traffic_history(timestamp)")
+        
+        # Scan Results Indexes (for Fidelity / History)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_results_scan_id ON scan_results(scan_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_results_mac ON scan_results(mac)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_results_ip ON scan_results(ip)")
+
         # Also index devices table for faster lookups if not primary key (id is PK, so indexed)
         # conn.execute("CREATE INDEX IF NOT EXISTS idx_devices_mac ON devices(mac)") # mac is part of logic but often via ID.
     except Exception as e:

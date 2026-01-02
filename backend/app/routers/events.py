@@ -146,30 +146,29 @@ async def get_device_fidelity_history(device_id: str, hours: int = 24):
             if not device_row: return []
             mac, ip = device_row
 
-            # 2. Get all successful discovery scans in the window
-            scans = conn.execute(
+            # 2. Optimized Single Query: Get scans and check for device presence in one go
+            # This replaces the N+1 loop that was causing slowness
+            rows = conn.execute(
                 """
-                SELECT id, finished_at 
-                FROM scans 
-                WHERE status = 'done' 
-                  AND scan_type IN ('arp', 'discovery')
-                  AND finished_at > now() - interval '1 hour' * ?
-                ORDER BY finished_at ASC
+                SELECT s.finished_at, 
+                       COUNT(sr.id) 
+                FROM scans s
+                LEFT JOIN scan_results sr ON s.id = sr.scan_id AND (sr.mac = ? OR sr.ip = ?)
+                WHERE s.status = 'done' 
+                  AND s.scan_type IN ('arp', 'discovery')
+                  AND s.finished_at > (now() - (CAST(? AS INTEGER) * INTERVAL '1 hour'))
+                GROUP BY s.id, s.finished_at
+                ORDER BY s.finished_at ASC
                 """,
-                [hours]
+                [mac, ip, hours]
             ).fetchall()
 
-            # 3. For each scan, check if the device was seen
             fidelity_data = []
-            for scan_id, finished_at in scans:
-                seen = conn.execute(
-                    "SELECT count(*) FROM scan_results WHERE scan_id = ? AND (mac = ? OR ip = ?)",
-                    [scan_id, mac, ip]
-                ).fetchone()[0]
+            for finished_at, seen_count in rows:
                 if finished_at:
                     fidelity_data.append({
                         "timestamp": finished_at,
-                        "status": "online" if seen > 0 else "offline"
+                        "status": "online" if seen_count > 0 else "offline"
                     })
             return fidelity_data
         finally:

@@ -31,8 +31,9 @@ async def _internal_list_devices(
                 clauses.append("status = ?")
                 params.append(status)
             if search:
-                clauses.append("(ip LIKE ? OR mac LIKE ? OR name LIKE ? OR display_name LIKE ? OR vendor LIKE ?)")
-                search_param = f"%{search}%"
+                clauses.append("(ip ILIKE ? OR mac ILIKE ? OR name ILIKE ? OR display_name ILIKE ? OR vendor ILIKE ?)")
+                # Support multi-word wild search by replacing spaces with %
+                search_param = f"%{search.strip().replace(' ', '%')}%"
                 params.extend([search_param] * 5)
             
             if clauses:

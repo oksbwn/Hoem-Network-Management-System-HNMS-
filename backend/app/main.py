@@ -17,7 +17,12 @@ from app.routers.classification import router as classification_router
 from app.routers.openwrt import router as openwrt_router
 from app.routers.analytics import router as analytics_router
 
+from app.core.logging import setup_logging
+
+# Initialize logging before app creation
+setup_logging()
 logger = logging.getLogger(__name__)
+
 app = FastAPI(title="Network Scanner API")
 
 def cleanup_stale_scans():
@@ -60,6 +65,9 @@ app.include_router(classification_router, prefix="/api/v1/classification", tags=
 
 app.include_router(openwrt_router, prefix="/api/v1/integrations/openwrt", tags=["openwrt"])
 app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["analytics"])
+
+from app.routers.logs import router as logs_router
+app.include_router(logs_router, prefix="/api/v1/logs", tags=["logs"])
 
 # SPA Static File Serving
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static")

@@ -46,6 +46,11 @@ const routes = [
         path: 'analytics',
         name: 'Analytics',
         component: () => import('@/views/Analytics.vue')
+      },
+      {
+        path: 'logs',
+        name: 'Logs',
+        component: () => import('@/views/Logs.vue')
       }
     ]
   }

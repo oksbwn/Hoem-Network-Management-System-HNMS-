@@ -1,3 +1,4 @@
+# Reload trigger stable
 from fastapi import FastAPI
 import asyncio
 import logging
@@ -13,6 +14,8 @@ from app.routers.mqtt import router as mqtt_router
 from app.routers.classification import router as classification_router
 from app.routers.openwrt import router as openwrt_router
 from app.routers.analytics import router as analytics_router
+from app.routers.system import router as system_router
+
 
 from app.core.logging import setup_logging
 
@@ -78,5 +81,7 @@ app.include_router(logs_router, prefix="/api/v1/logs", tags=["logs"])
 
 from app.routers.topology import router as topology_router
 app.include_router(topology_router, prefix="/api/v1/topology", tags=["topology"])
+app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
+
 
 

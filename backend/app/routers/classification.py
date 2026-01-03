@@ -45,7 +45,8 @@ async def create_rule(rule: ClassificationRuleCreate):
                 """,
                 [rule_id, rule.name, rule.pattern_hostname, rule.pattern_vendor, json.dumps(rule.ports), rule.device_type, rule.icon, rule.priority, False]
             )
-            conn.commit()
+            from app.core.db import commit
+            commit()
             row = conn.execute("SELECT id, name, pattern_hostname, pattern_vendor, ports, device_type, icon, priority, is_builtin, updated_at FROM classification_rules WHERE id = ?", [rule_id]).fetchone()
             return row
         finally:
@@ -82,7 +83,8 @@ async def update_rule(rule_id: str, payload: ClassificationRuleUpdate):
                 updates.append("updated_at = now()")
                 params.append(rule_id)
                 conn.execute(f"UPDATE classification_rules SET {', '.join(updates)} WHERE id = ?", params)
-                conn.commit()
+                from app.core.db import commit
+                commit()
             
             row = conn.execute("SELECT id, name, pattern_hostname, pattern_vendor, ports, device_type, icon, priority, is_builtin, updated_at FROM classification_rules WHERE id = ?", [rule_id]).fetchone()
             return row
@@ -109,7 +111,8 @@ async def delete_rule(rule_id: str):
                 raise HTTPException(status_code=403, detail="Cannot delete built-in rules")
             
             conn.execute("DELETE FROM classification_rules WHERE id = ?", [rule_id])
-            conn.commit()
+            from app.core.db import commit
+            commit()
         finally:
             conn.close()
     await asyncio.to_thread(delete)

@@ -259,7 +259,8 @@ async def import_devices(devices_data: List[DeviceRead]):
                     ]
                 )
                 count += 1
-            conn.commit()
+            from app.core.db import commit
+            commit()
             return count
         finally:
             conn.close()
@@ -276,7 +277,8 @@ async def delete_device(device_id: str):
             conn.execute("DELETE FROM device_ports WHERE device_id = ?", [device_id])
             conn.execute("DELETE FROM device_status_history WHERE device_id = ?", [device_id])
             conn.execute("DELETE FROM devices WHERE id = ?", [device_id])
-            conn.commit()
+            from app.core.db import commit
+            commit()
         finally:
             conn.close()
     try:

@@ -15,4 +15,5 @@ paho-mqtt
 httpx
 paramiko
 
-requests
+python-multipart
+ requests

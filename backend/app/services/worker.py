@@ -136,7 +136,8 @@ async def handle_schedules():
                     try:
                         # Use isoformat(timespec='seconds') for cleaner storage
                         conn.execute("INSERT OR REPLACE INTO config (key, value, updated_at) VALUES ('last_discovery_run_at', ?, ?)", [now.isoformat(), now])
-                        conn.commit()
+                        from app.core.db import commit
+                        commit()
                     finally: conn.close()
                 await asyncio.to_thread(update_last_run)
 
@@ -148,7 +149,8 @@ async def handle_schedules():
                 try:
                     next_run_at = now + timedelta(seconds=interval)
                     conn.execute("UPDATE scan_schedules SET last_run_at = ?, next_run_at = ? WHERE id = ?", [now, next_run_at, sched_id])
-                    conn.commit()
+                    from app.core.db import commit
+                    commit()
                 finally: conn.close()
             await asyncio.to_thread(update_sched)
 
@@ -170,7 +172,8 @@ async def handle_schedules():
                             c = json.loads(row[0])
                             c["last_sync"] = datetime.now(timezone.utc).isoformat()
                             conn.execute("UPDATE integrations SET config = ? WHERE name = 'openwrt'", [json.dumps(c)])
-                            conn.commit()
+                            from app.core.db import commit
+                            commit()
                     finally: conn.close()
                 await asyncio.to_thread(update_ts)
                 logger.info("OpenWRT sync completed.")
@@ -199,7 +202,8 @@ async def enqueue_scan(target: str, scan_type: str) -> Optional[str]:
 
             scan_id = str(uuid4())
             conn.execute("INSERT INTO scans (id, target, scan_type, status, created_at) VALUES (?, ?, ?, 'queued', ?)", [scan_id, t, scan_type, now])
-            conn.commit()
+            from app.core.db import commit
+            commit()
             return scan_id
         finally:
             conn.close()
@@ -220,16 +224,15 @@ async def handle_queued_scans(cleanup=False):
                 )
             
             # One scan at a time for stability on Pi
-            running = conn.execute("SELECT id FROM scans WHERE status = 'running'").fetchone()
-            if running:
-                conn.commit()
-                return None
+            row = conn.execute(
+                "SELECT id, target, scan_type FROM scans WHERE status = 'queued' ORDER BY created_at ASC LIMIT 1"
+            ).fetchone()
             
-            row = conn.execute("SELECT id, target, scan_type FROM scans WHERE status = 'queued' ORDER BY created_at LIMIT 1").fetchone()
             if row:
                 conn.execute("UPDATE scans SET status='running', started_at=? WHERE id=?", [now, row[0]])
             
-            conn.commit()
+            from app.core.db import commit
+            commit()
             return row
         finally:
             conn.close()

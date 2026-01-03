@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 import json
 import logging
 import time
+import threading
 from typing import Any, Optional
 from app.core.config import get_settings
 from app.core.db import get_connection
@@ -33,6 +34,7 @@ class MQTTManager:
         self.last_test_time = 0
         self.is_reachable = False
         self._client = None
+        self._lock = threading.Lock()
         self._load_status()
         self._connect_persistent()
 
@@ -77,43 +79,55 @@ class MQTTManager:
 
     def _connect_persistent(self):
         """Connects the persistent client."""
-        if self._client and self._client.is_connected():
-            return
+        with self._lock:
+            # If we already have a client, don't create a new one.
+            # Paho handles auto-reconnect automatically in its own background thread.
+            if self._client:
+                return
+                
+            config = self.get_config()
+            # Use a highly unique client ID to avoid conflicts during restarts/reloads/multiple processes
+            import os
+            import random
+            # Add random suffix to PID to be extra sure across rapid reloads
+            client_id = f"hnms_main_{os.getpid()}_{random.randint(1000, 9999)}"
+            logger.info(f"Initializing persistent MQTT client with unique ID: {client_id}")
             
-        config = self.get_config()
-        # Use a unique client ID to avoid conflicts during restarts/reloads
-        import os
-        client_id = f"hnms_main_{os.getpid()}"
-        self._client = get_mqtt_client(client_id)
-        
-        if config['username']:
-            self._client.username_pw_set(config['username'], config['password'])
+            self._client = get_mqtt_client(client_id)
             
-        def on_connect(client, userdata, flags, rc):
-            if rc == 0:
-                self.is_reachable = True
-                self._save_status("online")
-                logger.info("MQTT Persistent Client connected.")
-            else:
+            if config['username']:
+                self._client.username_pw_set(config['username'], config['password'])
+                
+            def on_connect(client, userdata, flags, rc):
+                if rc == 0:
+                    self.is_reachable = True
+                    self._save_status("online")
+                    logger.info("MQTT Persistent Client connected successfully.")
+                else:
+                    self.is_reachable = False
+                    self._save_status("offline", f"Connection failed with code {rc}")
+                    logger.warning(f"MQTT Persistent Client failed to connect: rc={rc}")
+
+            def on_disconnect(client, userdata, rc):
+                # rc=0 means intentional disconnect. 
+                # rc=7 means connection lost (broker kicked us, etc.)
                 self.is_reachable = False
-                self._save_status("offline", f"Connection failed with code {rc}")
-                logger.warning(f"MQTT Persistent Client failed to connect: {rc}")
+                if rc != 0:
+                    logger.warning(f"MQTT Persistent Client connection lost (rc={rc}). Paho will attempt auto-reconnect.")
+                else:
+                    logger.info("MQTT Persistent Client disconnected intentionally.")
 
-        def on_disconnect(client, userdata, rc):
-            self.is_reachable = False
-            logger.info(f"MQTT Persistent Client disconnected (rc={rc})")
-
-        self._client.on_connect = on_connect
-        self._client.on_disconnect = on_disconnect
-        
-        try:
-            # Set a timeout for the initial connection to prevent hanging the thread pool
-            self._client.connect(config['broker'], config['port'], keepalive=60)
-            self._client.loop_start()
-        except Exception as e:
-            logger.error(f"Failed to start MQTT persistent client: {e}")
-            self.is_reachable = False
-            self._save_status("offline", str(e))
+            self._client.on_connect = on_connect
+            self._client.on_disconnect = on_disconnect
+            
+            try:
+                # Set keepalive to 60s. loop_start() runs the background thread for auto-reconnect.
+                self._client.connect(config['broker'], config['port'], keepalive=60)
+                self._client.loop_start()
+            except Exception as e:
+                logger.error(f"Failed to start MQTT persistent client: {e}")
+                self.is_reachable = False
+                self._save_status("offline", str(e))
 
     def get_config(self):
         settings = get_settings()
@@ -195,26 +209,29 @@ class MQTTManager:
     def check_health(self):
         """Periodic health check for MQTT broker."""
         now = time.time()
-        # Only check every 60 seconds unless we are offline
-        interval = 60 if self.is_reachable else 30
-        
-        if now - self.last_test_time > interval:
-            if self._client and self._client.is_connected():
-                # Persistent client is fine, no need to reconnect/test
-                logger.debug("MQTT health check: Persistent client is connected.")
-                self.is_reachable = True
-                self._save_status("online")
-                self.last_test_time = now
-            else:
-                # Persistent client is down, try to reconnect or diagnose
-                logger.info("Performing periodic MQTT health check (persistent client disconnected)...")
-                
-                # Try to ensure persistent client is running
-                if not self._client or not self._client.is_connected():
-                     self._connect_persistent()
+        # Only check every 60 seconds
+        if now - self.last_test_time < 60:
+            return
 
-                # Run diagnostic test if we suspect issues
-                self.test_connection()
+        self.last_test_time = now
+        
+        if self._client and self._client.is_connected():
+            logger.debug("MQTT health check: Persistent client is connected.")
+            self.is_reachable = True
+            self._save_status("online")
+        elif self._client:
+            # Client exists, but disconnected. Paho's background loop is handling it.
+            # We don't want to call _connect_persistent or test_connection here,
+            # as that would create a competing second connection (Client ID war).
+            logger.debug("MQTT health check: Client is currently disconnected. Relying on auto-reconnect loop.")
+            self.is_reachable = False
+            # Check if we should update DB status to offline if it's been down a while
+            if self.last_status == "online":
+                self._save_status("offline", "Connection lost; auto-reconnecting...")
+        else:
+            # No client at all, try to initialize it
+            logger.info("MQTT health check: No persistent client found. Initializing...")
+            self._connect_persistent()
 
     def publish(self, topic: str, payload: Any, retain: bool = False):
         if not self._client or not self._client.is_connected():

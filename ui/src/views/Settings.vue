@@ -372,7 +372,35 @@
           </button>
         </div>
 
+        <!-- Database Management -->
+        <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
+              <Database class="w-5 h-5" />
+            </div>
+            <div>
+              <h2 class="text-base font-semibold text-slate-900 dark:text-white">Database Management</h2>
+              <p class="text-xs text-slate-500">Backup and restore system data</p>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <button @click="downloadBackup"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold transition-all shadow-sm">
+              <Download class="w-4 h-4" />
+              <span>Download Backup</span>
+            </button>
+            <button @click="triggerRestore"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold transition-all shadow-sm">
+              <Upload class="w-4 h-4" />
+              <span>Restore Database</span>
+            </button>
+            <input type="file" ref="restoreFileInput" @change="handleRestoreUpload" accept=".duckdb" class="hidden" />
+          </div>
+        </div>
+
         <!-- System Maintenance -->
+
         <div class="bg-white dark:bg-slate-800 rounded-lg border border-red-200 dark:border-red-900/20 p-4">
           <h3 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">System Maintenance</h3>
           <p class="text-xs text-slate-500 mb-4">Cleanup tools and data management</p>
@@ -618,7 +646,8 @@
 import { ref, reactive, onMounted, watch, onUnmounted } from 'vue'
 import axios from 'axios'
 import * as LucideIcons from 'lucide-vue-next'
-import { Save, RotateCcw, Trash2, AlertTriangle, Loader2, Plus, Fingerprint, Pencil, Trash, X, Check, Search, ShieldCheck, Tag, Settings2, Layout, ChevronDown } from 'lucide-vue-next'
+import { Save, RotateCcw, Trash2, AlertTriangle, Loader2, Plus, Fingerprint, Pencil, Trash, X, Check, Search, ShieldCheck, Tag, Settings2, Layout, ChevronDown, Download, Upload, Database } from 'lucide-vue-next'
+
 import { useNotifications } from '@/composables/useNotifications'
 
 const settings = reactive({
@@ -650,6 +679,9 @@ const testLoading = ref(false)
 const mqttStatus = ref(null)
 const subnetError = ref('')
 let mqttPollTimer = null
+const restoreFileInput = ref(null)
+const isRestoring = ref(false)
+
 
 // Classification Rules State
 const rules = ref([])
@@ -952,8 +984,14 @@ const openConfirmation = (type) => {
     confirmModal.message = 'This will revert all settings (scan intervals, subnets, UI preferences) to their default values. Your data will be preserved.'
     confirmModal.confirmText = 'Restore Defaults'
     confirmModal.confirmClass = 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+  } else if (type === 'restore') {
+    confirmModal.title = 'Restore Database?'
+    confirmModal.message = 'This will replace your current database with the selected backup. The application will restart and current unsaved progress will be lost.'
+    confirmModal.confirmText = 'Yes, Restore and Restart'
+    confirmModal.confirmClass = 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500'
   }
 }
+
 
 const closeConfirmation = () => {
   confirmModal.isOpen = false
@@ -985,8 +1023,24 @@ const confirmAction = async () => {
 
       // Re-fetch to confirm
       await fetchSettings()
+    } else if (confirmModal.type === 'restore') {
+      const file = restoreFileInput.value.files[0]
+      if (!file) return
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      await axios.post('/api/v1/system/restore', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      notifySuccess('Database restored! Reloading...')
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
     }
   } catch (e) {
+
     console.error(e)
     alert('Action failed')
   } finally {
@@ -997,6 +1051,39 @@ const confirmAction = async () => {
 // Wrappers for buttons
 const clearAllData = () => openConfirmation('delete')
 const resetConfig = () => openConfirmation('reset')
+
+const downloadBackup = async () => {
+  try {
+    const response = await axios.get('/api/v1/system/backup', {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'network_scanner.duckdb')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    notifySuccess('Backup download started')
+  } catch (e) {
+    notifyError('Failed to download backup')
+  }
+}
+
+const triggerRestore = () => {
+  restoreFileInput.value.click()
+}
+
+const handleRestoreUpload = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  if (!file.name.endsWith('.duckdb')) {
+    notifyError('Please select a .duckdb file')
+    return
+  }
+  openConfirmation('restore')
+}
+
 
 const formatLastRun = (dateStr) => {
   if (!dateStr) return 'Never'

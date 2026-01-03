@@ -2,10 +2,16 @@ import duckdb
 from pathlib import Path
 from app.core.config import get_settings
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
 _shared_conn: duckdb.DuckDBPyConnection = None
+_db_lock = threading.RLock()
+
+def get_db_lock():
+    """Returns the global database lock for maintenance operations."""
+    return _db_lock
 
 def get_connection() -> duckdb.DuckDBPyConnection:
     """
@@ -14,25 +20,43 @@ def get_connection() -> duckdb.DuckDBPyConnection:
     The shared connection handles the file lock, and each call returns a thread-safe cursor.
     """
     global _shared_conn
-    if _shared_conn is None:
-        settings = get_settings()
-        db_path = Path(settings.db_path)
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+    with _db_lock:
+        if _shared_conn is None:
+            settings = get_settings()
+            db_path = Path(settings.db_path)
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Open the master connection for the process
+            _shared_conn = duckdb.connect(str(db_path))
+            
+            # Optimize DuckDB for concurrency
+            _shared_conn.execute("SET threads TO 4")
+            _shared_conn.execute("SET memory_limit = '512MB'")
         
-        # Open the master connection for the process
-        _shared_conn = duckdb.connect(str(db_path))
-        
-        # Optimize DuckDB for concurrency
-        _shared_conn.execute("SET threads TO 4")
-        _shared_conn.execute("SET memory_limit = '512MB'")
-    
-    # Return a cursor based on the master connection
-    return _shared_conn.cursor()
+        # Return a cursor based on the master connection
+        return _shared_conn.cursor()
 
-def commit(conn: duckdb.DuckDBPyConnection) -> None:
-    """Commits the given connection."""
-    if conn:
-        conn.commit()
+def close_shared_connection():
+    """Closes the global shared connection. Useful for operations like restore or backup."""
+    global _shared_conn
+    with _db_lock:
+        if _shared_conn:
+            try:
+                _shared_conn.close()
+                logger.info("Shared database connection closed.")
+            except Exception as e:
+                logger.error(f"Error closing shared connection: {e}")
+            _shared_conn = None
+
+def commit(conn=None) -> None:
+    """
+    Commits the global shared connection. 
+    The 'conn' argument is accepted for backward compatibility but ignored.
+    """
+    global _shared_conn
+    with _db_lock:
+        if _shared_conn:
+            _shared_conn.commit()
 
 def init_db() -> None:
     settings = get_settings()
@@ -63,7 +87,7 @@ def init_db() -> None:
         seed_classification_rules(conn)
         
         print("Database initialized successfully.")
-        conn.commit()
+        commit()
     except Exception as e:
         print(f"ERROR during database initialization: {e}")
         raise e
@@ -201,9 +225,23 @@ def migrate_db(conn: duckdb.DuckDBPyConnection) -> None:
     except Exception as e:
         print(f"Migration error (indexes): {e}")
 
+    # 5. Ensure classification_rules table exists (added redundantly to schema.sql)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS classification_rules (
+            id               TEXT PRIMARY KEY,
+            name             TEXT NOT NULL,
+            pattern_hostname TEXT,
+            pattern_vendor   TEXT,
+            ports            TEXT,
+            device_type      TEXT NOT NULL,
+            icon             TEXT NOT NULL,
+            priority         INTEGER NOT NULL DEFAULT 100,
+            is_builtin       BOOLEAN NOT NULL DEFAULT FALSE,
+            updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
-
-    conn.commit()
+    commit()
 
 def seed_classification_rules(conn: duckdb.DuckDBPyConnection) -> None:
     """Seeds the classification_rules table from initial_rules.json if empty."""
@@ -241,7 +279,7 @@ def seed_classification_rules(conn: duckdb.DuckDBPyConnection) -> None:
                     True # is_builtin
                 ]
             )
-        conn.commit()
+        commit()
         print(f"Successfully seeded {len(rules_data)} classification rules.")
     except Exception as e:
         print(f"Error seeding classification rules: {e}")

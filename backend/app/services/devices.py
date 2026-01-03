@@ -142,7 +142,8 @@ async def batch_upsert_devices(devices_data: List[Dict[str, Any]]) -> List[str]:
                         "ip_type": dev_row[6], "last_seen": dev_row[7]
                     })
 
-            conn.commit()
+            from app.core.db import commit
+            commit()
             return upserted_ids, new_devices_to_enrich, online_notifications
         finally:
             conn.close()
@@ -171,7 +172,8 @@ async def record_status_change(conn, device_id: str, status: str, timestamp: dat
                     "INSERT INTO device_status_history (id, device_id, status, changed_at) VALUES (?, ?, ?, ?)",
                     [str(uuid4()), device_id, status, timestamp]
                 )
-                c.commit()
+                from app.core.db import commit
+                commit()
             finally:
                 c.close()
         await asyncio.to_thread(sync_record)
@@ -183,16 +185,39 @@ async def record_status_change(conn, device_id: str, status: str, timestamp: dat
         )
 
 def format_mac(mac: str) -> str:
-    if not mac: return ""
+    if not mac or mac.lower() == "unknown": return ""
     clean = "".join(c for c in mac if c.isalnum()).upper()
-    if len(clean) != 12: return mac
+    if len(clean) != 12 or not all(c in "0123456789ABCDEF" for c in clean):
+        return "" 
     return ":".join(clean[i:i+2] for i in range(0, 12, 2))
 
 async def enrich_device(device_id: str, mac: str):
-    if not mac: return
-    mac = format_mac(mac)
     from app.services.classification import get_vendor_locally, classify_device
-    vendor = get_vendor_locally(mac)
+    
+    mac = format_mac(mac)
+    if not mac: return
+
+    # Check if we already have a vendor for this MAC address anywhere in the database to avoid redundant API calls
+    def get_existing_vendor_by_mac():
+        conn = get_connection()
+        try:
+            # First try the current device
+            row = conn.execute("SELECT vendor FROM devices WHERE id = ?", [device_id]).fetchone()
+            if row and row[0] and row[0].lower() != "unknown":
+                return row[0]
+            
+            # Then try any other device with the same MAC
+            row = conn.execute("SELECT vendor FROM devices WHERE mac = ? AND vendor IS NOT NULL AND vendor != 'unknown' LIMIT 1", [mac]).fetchone()
+            return row[0] if row else None
+        finally:
+            conn.close()
+            
+    existing_vendor = await asyncio.to_thread(get_existing_vendor_by_mac)
+    if existing_vendor:
+        logger.debug(f"Skipping enrichment for {mac}, vendor already known from database: {existing_vendor}")
+        vendor = existing_vendor
+    else:
+        vendor = get_vendor_locally(mac)
     
     if not vendor:
         url = f"https://api.macvendors.com/{mac}"
@@ -246,7 +271,8 @@ async def enrich_device(device_id: str, mac: str):
                         """,
                         [vendor, new_type, new_icon, new_display, json.dumps(attrs), device_id]
                     )
-                    conn.commit()
+                    from app.core.db import commit
+                    commit()
             finally:
                 conn.close()
         await asyncio.to_thread(sync_update)
@@ -285,7 +311,8 @@ async def update_device_fields(device_id: str, fields: Dict[str, Any]) -> Option
             if updates:
                 params.append(device_id)
                 conn.execute(f"UPDATE devices SET {', '.join(updates)} WHERE id = ?", params)
-                conn.commit()
+                from app.core.db import commit
+                commit()
             
             updated = conn.execute("SELECT id, ip, mac, name, display_name, device_type, vendor, icon, status, ip_type, first_seen, last_seen, is_trusted FROM devices WHERE id = ?", [device_id]).fetchone()
             return updated

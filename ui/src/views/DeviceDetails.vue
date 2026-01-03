@@ -3,9 +3,7 @@
     <!-- Header Area -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div class="flex items-center gap-4">
-        <router-link to="/devices"
-          class="p-2.5 bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-white dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 shadow-sm"
-          v-tooltip="'Back to Device List'">
+        <router-link to="/devices" class="btn-action !p-2.5 rounded-xl" v-tooltip="'Back to Device List'">
           <ArrowLeft class="w-5 h-5" />
         </router-link>
         <div>
@@ -27,8 +25,7 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <button @click="runDeepScan" :disabled="isScanning"
-          class="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400"
+        <button @click="runDeepScan" :disabled="isScanning" class="btn-action"
           v-tooltip="'Deep Port Audit (Scan top 1000 ports)'">
           <component :is="isScanning ? Loader2 : Scan" class="w-5 h-5" :class="{ 'animate-spin': isScanning }" />
         </button>
@@ -59,15 +56,14 @@
               </div>
             </div>
             <button @click="approveDevice"
-              class="px-5 py-2.5 bg-white text-red-600 font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
+              class="btn-primary !bg-white !text-red-600 !px-5 !py-2.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105">
               <ShieldCheck class="w-5 h-5" /> Approve
             </button>
           </div>
         </div>
 
         <!-- Device Info Card -->
-        <div
-          class="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-8 shadow-2xl overflow-hidden group">
+        <div class="premium-card group">
           <div
             class="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity">
             <component :is="getIcon(form.icon || device.icon)" class="w-32 h-32" />
@@ -84,7 +80,7 @@
                 class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Display
                 Name</label>
               <input v-model="form.display_name" type="text" placeholder="Friendly Name"
-                class="w-full px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium" />
+                class="input-base px-4 py-3 bg-white/50 dark:bg-slate-900/50 rounded-2xl" />
             </div>
 
             <div class="space-y-1">
@@ -93,7 +89,7 @@
                 Category</label>
               <div class="relative w-full group" v-click-outside="() => isCategoryOpen = false">
                 <button @click="isCategoryOpen = !isCategoryOpen"
-                  class="w-full flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none hover:ring-4 hover:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium text-slate-900 dark:text-white group-hover:bg-white dark:group-hover:bg-slate-800">
+                  class="input-base flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 rounded-2xl">
                   <div class="flex items-center gap-2.5">
                     <span class="truncate">{{ form.device_type || 'Select Category' }}</span>
                   </div>
@@ -138,7 +134,7 @@
                 Selection</label>
               <Popover class="relative">
                 <PopoverButton
-                  class="w-full flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all hover:bg-white dark:hover:bg-slate-800 group">
+                  class="input-base flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 rounded-2xl">
                   <div class="flex items-center gap-3">
                     <component :is="getIcon(form.icon)" class="w-5 h-5 text-blue-500" />
                     <span class="text-sm font-medium">{{ form.icon || 'Select Icon' }}</span>
@@ -184,7 +180,7 @@
                 class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Network
                 Hostname</label>
               <input v-model="form.name" type="text"
-                class="w-full px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-mono text-sm" />
+                class="input-base px-4 py-3 bg-white/50 dark:bg-slate-900/50 rounded-2xl font-mono text-sm" />
             </div>
 
             <div class="space-y-1">
@@ -192,7 +188,7 @@
                 Reservation</label>
               <div class="relative w-full group" v-click-outside="() => isIPOpen = false">
                 <button @click="isIPOpen = !isIPOpen"
-                  class="w-full flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none hover:ring-4 hover:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium text-slate-900 dark:text-white group-hover:bg-white dark:group-hover:bg-slate-800">
+                  class="input-base flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 rounded-2xl">
                   <span class="truncate">{{ getIPAllocationLabel(form.ip_type) }}</span>
                   <ChevronDown class="h-4 w-4 text-slate-400 transition-transform duration-200"
                     :class="{ 'rotate-180': isIPOpen }" />
@@ -225,7 +221,7 @@
                 Via (Parent)</label>
               <div class="relative w-full group" v-click-outside="() => isParentOpen = false">
                 <button @click="isParentOpen = !isParentOpen"
-                  class="w-full flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none hover:ring-4 hover:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium text-slate-900 dark:text-white group-hover:bg-white dark:group-hover:bg-slate-800">
+                  class="input-base flex items-center justify-between px-4 py-3 bg-white/50 dark:bg-slate-900/50 rounded-2xl">
                   <span class="truncate">{{ getParentLabel }}</span>
                   <ChevronDown class="h-4 w-4 text-slate-400 transition-transform duration-200"
                     :class="{ 'rotate-180': isParentOpen }" />
@@ -291,8 +287,7 @@
         </div>
 
         <!-- Availability Trend Chart -->
-        <div
-          class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-8 shadow-2xl relative overflow-hidden group">
+        <div class="premium-card">
           <div class="flex items-center justify-between mb-8">
             <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <div class="w-1.5 h-6 bg-blue-500 rounded-full"></div>
@@ -372,8 +367,7 @@
 
 
         <!-- Traffic History Chart -->
-        <div
-          class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-8 shadow-2xl relative overflow-hidden group">
+        <div class="premium-card">
           <div class="flex items-center justify-between mb-8">
             <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <div class="w-1.5 h-6 bg-purple-500 rounded-full"></div>
@@ -416,21 +410,18 @@
             <div class="text-2xl font-black text-emerald-500">{{ longestOnlineStreak }} <span
                 class="text-xs font-medium text-slate-400">hours</span></div>
           </div>
-          <div
-            class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-6 shadow-xl">
+          <div class="card-base">
             <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Avg Offline</div>
             <div class="text-2xl font-black text-rose-500">{{ avgOfflineDuration }} <span
                 class="text-xs font-medium text-slate-400">mins</span></div>
           </div>
-          <div
-            class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-6 shadow-xl">
+          <div class="card-base">
             <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Uptime</div>
             <div class="text-2xl font-black text-blue-500">{{ uptimePercentage }}%</div>
           </div>
         </div>
 
-        <div
-          class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-700/50 p-8 shadow-xl relative overflow-hidden">
+        <div class="premium-card">
           <!-- Background Decoration -->
           <div class="absolute -bottom-12 -right-12 w-48 h-48 bg-blue-500/10 dark:bg-blue-400/5 rounded-full blur-3xl">
           </div>
@@ -507,7 +498,7 @@ import {
   Wifi, WifiOff
 } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
-import axios from 'axios'
+import api from '@/utils/api'
 import TerminalModal from '../components/TerminalModal.vue'
 import { formatRelativeTime } from '@/utils/date'
 import { useNotifications } from '@/composables/useNotifications'
@@ -536,8 +527,6 @@ const isParentOpen = ref(false)
 const categorySearch = ref('')
 const iconSearch = ref('')
 const parentSearch = ref('')
-
-
 
 // getIcon is now imported from @/utils/icons
 
@@ -577,19 +566,6 @@ const formatTime = (ts) => {
   if (!ts) return 'Never'
   return new Date(ts).toLocaleString()
 }
-const vClickOutside = {
-  mounted(el, binding) {
-    el._clickOutside = (event) => {
-      if (!(el === event.target || el.contains(event.target))) {
-        binding.value(event)
-      }
-    }
-    document.addEventListener('click', el._clickOutside)
-  },
-  unmounted(el) {
-    document.removeEventListener('click', el._clickOutside)
-  }
-}
 
 const getIPAllocationLabel = (val) => {
   if (val === 'static') return 'Static IP'
@@ -598,7 +574,7 @@ const getIPAllocationLabel = (val) => {
 
 const approveDevice = async () => {
   try {
-    await axios.patch(`/api/v1/devices/${device.value.id}`, { is_trusted: true })
+    await api.patch(`/devices/${device.value.id}`, { is_trusted: true })
     await fetchDevice()
     notifySuccess('Device approved successfully')
   } catch (e) {
@@ -608,7 +584,7 @@ const approveDevice = async () => {
 
 const fetchAllDevices = async () => {
   try {
-    const res = await axios.get('/api/v1/devices/?limit=-1')
+    const res = await api.get('/devices/?limit=-1')
     allDevices.value = res.data.items || []
   } catch (e) {
     console.error('Failed to fetch devices:', e)
@@ -618,15 +594,15 @@ const fetchAllDevices = async () => {
 const fetchHistory = async () => {
   try {
     const offset = (historyPage.value - 1) * historyLimit.value
-    const res = await axios.get(`/api/v1/events/device/${route.params.id}?limit=${historyLimit.value}&offset=${offset}`)
+    const res = await api.get(`/events/device/${route.params.id}?limit=${historyLimit.value}&offset=${offset}`)
     history.value = res.data
 
     // Fetch total count for pagination
-    const countRes = await axios.get(`/api/v1/events/device/${route.params.id}/count`)
+    const countRes = await api.get(`/events/device/${route.params.id}/count`)
     historyTotal.value = countRes.data.total
 
     // Also fetch high-fidelity data for the chart (independent of pagination)
-    const fidelityRes = await axios.get(`/api/v1/events/device/${route.params.id}/fidelity?hours=24`)
+    const fidelityRes = await api.get(`/events/device/${route.params.id}/fidelity?hours=24`)
     fidelityHistory.value = fidelityRes.data
   } catch (e) {
     console.error('Failed to fetch history:', e)
@@ -944,7 +920,7 @@ const runDeepScan = async () => {
   if (isScanning.value) return
   isScanning.value = true
   try {
-    await axios.post(`/api/v1/scans/device/${device.value.id}`)
+    await api.post(`/scans/audit/${device.value.id}`)
     await fetchDevice() // Refresh details to show new ports
     notifySuccess('Port scan complete')
   } catch (e) {
@@ -961,7 +937,7 @@ const openSSH = (port) => {
 
 const fetchDevice = async () => {
   try {
-    const response = await axios.get(`/api/v1/devices/${route.params.id}`)
+    const response = await api.get(`/devices/${route.params.id}`)
     device.value = response.data
     Object.assign(form, {
       display_name: device.value.display_name || '',
@@ -979,7 +955,7 @@ const fetchDevice = async () => {
 
 const saveChanges = async () => {
   try {
-    await axios.patch(`/api/v1/devices/${route.params.id}`, form)
+    await api.patch(`/devices/${route.params.id}`, form)
     notifySuccess('Device configuration updated')
     await fetchDevice()
     fetchAllDevices() // Refresh list for parent labels elsewhere if needed

@@ -1,13 +1,13 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="page-header">
       <div>
         <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Devices</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ globalStats.total }} devices discovered</p>
       </div>
       <div class="flex items-center gap-3">
-        <div class="flex bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div class="btn-group">
           <button @click="exportDevices"
             class="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-l-lg transition text-slate-600 dark:text-slate-400 flex items-center gap-2 text-xs font-medium"
             v-tooltip="'Export Devices to JSON'">
@@ -23,8 +23,7 @@
           </button>
         </div>
         <input type="file" ref="importInput" class="hidden" @change="handleImport" accept=".json" />
-        <button @click="triggerScan" :disabled="isScanning"
-          class="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400"
+        <button @click="triggerScan" :disabled="isScanning" class="btn-action"
           v-tooltip="isScanning ? 'Scanning Network...' : 'Scan Network'">
           <component :is="isScanning ? Loader2 : RefreshCw" class="w-5 h-5" :class="{ 'animate-spin': isScanning }" />
         </button>
@@ -35,8 +34,7 @@
 
     <!-- Quick Stats -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div v-for="stat in deviceStats" :key="stat.label"
-        class="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:shadow-xl transition-all flex flex-col justify-between overflow-hidden group min-h-[100px]">
+      <div v-for="stat in deviceStats" :key="stat.label" class="card-stat group">
 
         <!-- Sparkline Background -->
         <Sparkline :data="stat.trend" :color="stat.color" class="opacity-15" />
@@ -59,7 +57,7 @@
           <p class="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
             {{ stat.value }}
           </p>
-          <p :style="{ color: stat.color }" class="text-[9px] font-black uppercase tracking-[0.2em] opacity-80 mt-1">
+          <p :class="stat.textColor" class="text-[9px] font-black uppercase tracking-[0.2em] opacity-80 mt-1">
             {{ stat.label }}
           </p>
         </div>
@@ -67,13 +65,12 @@
     </div>
 
     <!-- Filters & Search -->
-    <div
-      class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border border-white/20 dark:border-slate-700/50 p-4 shadow-sm flex flex-col gap-4">
+    <div class="glass-panel flex flex-col gap-4">
       <div class="flex flex-col md:flex-row gap-4 items-center">
         <div class="relative flex-1 w-full">
           <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input v-model="search" @input="debounceFetch" type="text" placeholder="Search IP, Mac, Vendor or Name..."
-            class="w-full pl-11 pr-4 py-2 bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-700/50 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm" />
+            class="input-base" />
         </div>
         <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
           <!-- Status Filter -->
@@ -156,31 +153,28 @@
     </div>
 
     <!-- Devices Table -->
-    <div
-      class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+    <div class="content-panel">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
           <thead class="bg-slate-50 dark:bg-slate-900/50">
             <tr>
               <th v-for="header in tableHeaders" :key="header.key" @click="toggleSort(header.key)"
-                :class="[header.class, 'px-3 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors']">
+                :class="[header.class, 'table-header-cell cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors']">
                 <div class="flex items-center gap-1">
                   {{ header.label }}
                   <component :is="getSortIcon(header.key)" class="h-3 w-3"
                     v-if="sortBy === header.key || header.key === 'ip'" />
                 </div>
               </th>
-              <th
-                class="hidden md:table-cell px-3 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <th class="hidden md:table-cell table-header-cell text-right">
                 Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
             <template v-for="device in devices" :key="device.id">
-              <tr @click="$router.push({ name: 'DeviceDetails', params: { id: device.id } })"
-                class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
+              <tr @click="$router.push({ name: 'DeviceDetails', params: { id: device.id } })" class="hover-row group"
                 :class="{ '!bg-red-50/30 dark:!bg-red-900/20': !device.is_trusted }">
-                <td class="px-3 py-4">
+                <td class="table-data-cell">
                   <div class="flex items-center gap-3">
                     <button @click.stop="toggleRow(device.id)"
                       class="md:hidden p-1 -ml-2 text-slate-400 hover:text-blue-500">
@@ -263,18 +257,17 @@
                       v-tooltip="'Approve Device'">
                       <ShieldCheck class="h-4 w-4" />
                     </button>
-                    <router-link :to="{ name: 'DeviceDetails', params: { id: device.id } }"
-                      class="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all"
+                    <router-link :to="{ name: 'DeviceDetails', params: { id: device.id } }" class="btn-action !p-1.5"
                       v-tooltip="'View Device Details'">
                       <Eye class="h-4 w-4" />
                     </router-link>
                     <button @click.stop="openEditDialog(device)"
-                      class="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                      class="btn-action !p-1.5 hover:!text-blue-600 dark:hover:!text-blue-400 hover:!bg-blue-50 dark:hover:!bg-blue-900/20"
                       v-tooltip="'Edit Device Name & Type'">
                       <Pencil class="h-4 w-4" />
                     </button>
                     <button @click.stop="confirmDelete(device)"
-                      class="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                      class="btn-action !p-1.5 hover:!text-red-600 dark:hover:!text-red-400 hover:!bg-red-50 dark:hover:!bg-red-900/20"
                       v-tooltip="'Delete Device'">
                       <Trash2 class="h-4 w-4" />
                     </button>
@@ -288,15 +281,15 @@
                     <!-- Actions Row -->
                     <div class="flex gap-2 mb-4">
                       <router-link :to="{ name: 'DeviceDetails', params: { id: device.id } }"
-                        class="flex-1 flex items-center justify-center gap-2 p-2 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                        class="btn-action flex-1 gap-2 !p-2 !text-xs font-medium">
                         <Eye class="h-3.5 w-3.5" /> View
                       </router-link>
                       <button @click.stop="openEditDialog(device)"
-                        class="flex-1 flex items-center justify-center gap-2 p-2 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-lg text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                        class="btn-action flex-1 gap-2 !p-2 !text-xs font-medium !text-blue-600 dark:!text-blue-400 !bg-blue-50 dark:!bg-blue-900/20 !border-blue-100 dark:!border-blue-800/50">
                         <Pencil class="h-3.5 w-3.5" /> Edit
                       </button>
                       <button @click.stop="confirmDelete(device)"
-                        class="flex-1 flex items-center justify-center gap-2 p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-lg text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                        class="btn-action flex-1 gap-2 !p-2 !text-xs font-medium !text-red-600 dark:!text-red-400 !bg-red-50 dark:!bg-red-900/20 !border-red-100 dark:!border-red-800/50">
                         <Trash2 class="h-3.5 w-3.5" /> Delete
                       </button>
                     </div>
@@ -360,15 +353,16 @@
 
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="flex justify-center items-center gap-2">
-      <button @click="changePage(currentPage - 1)" :disabled="currentPage <= 1"
-        class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+      <button @click="changePage(currentPage - 1)" :disabled="currentPage <= 1" class="pagination-btn">
         Previous
+      </button>
+      <button @click="fetchDevices" class="btn-action !p-2" v-tooltip="'Refresh List'">
+        <RefreshCw class="h-5 w-5" :class="{ 'animate-spin': loading }" />
       </button>
       <div class="px-4 py-2 bg-slate-900 dark:bg-white rounded-lg text-sm font-medium text-white dark:text-slate-900">
         {{ currentPage }} / {{ totalPages }}
       </div>
-      <button @click="changePage(currentPage + 1)" :disabled="currentPage >= totalPages"
-        class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+      <button @click="changePage(currentPage + 1)" :disabled="currentPage >= totalPages" class="pagination-btn">
         Next
       </button>
     </div>
@@ -380,7 +374,7 @@
     <div v-if="deviceToDelete" class="fixed inset-0 z-50 overflow-y-auto" @click.self="cancelDelete">
       <div class="flex min-h-screen items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50 transition-opacity"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-sm w-full p-6">
+        <div class="modal-container-sm">
           <div class="flex flex-col items-center text-center">
             <div class="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
               <Trash2 class="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -409,7 +403,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, reactive, computed, watch } from 'vue'
-import axios from 'axios'
+import api from '@/utils/api'
 import Sparkline from '@/components/Sparkline.vue'
 import TrafficSparkline from '@/components/TrafficSparkline.vue'
 import EditDeviceModal from '@/components/EditDeviceModal.vue'
@@ -438,21 +432,6 @@ const toggleRow = (id) => {
   }
 }
 
-// Custom directive for clicking outside dropdowns
-const vClickOutside = {
-  mounted(el, binding) {
-    el._clickOutside = (event) => {
-      if (!(el === event.target || el.contains(event.target))) {
-        binding.value(event)
-      }
-    }
-    document.addEventListener('click', el._clickOutside)
-  },
-  unmounted(el) {
-    document.removeEventListener('click', el._clickOutside)
-  }
-}
-
 const search = ref('')
 const statusFilter = ref('')
 const typeFilter = ref('')
@@ -460,6 +439,7 @@ const sortBy = ref('ip')
 const sortOrder = ref('asc')
 
 const isScanning = ref(false)
+const loading = ref(false)
 const isEditModalOpen = ref(false)
 const deviceToEdit = ref(null)
 
@@ -499,8 +479,6 @@ const changePage = (page) => {
   fetchDevices()
 }
 
-// getIcon is now imported from @/utils/icons
-
 const getDeviceStatusColor = (device) => {
   if (device.status === 'online') return 'bg-emerald-500'
   if (device.status === 'offline') return 'bg-slate-400'
@@ -514,6 +492,7 @@ const deviceStats = computed(() => {
       value: globalStats.value.total,
       icon: LucideIcons.Database,
       color: '#3b82f6',
+      textColor: 'text-blue-500',
       bgClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
       trend: [10, 12, 11, 13, 12, 14, 13, 15, 14, 16],
       change: '+2.4%',
@@ -524,6 +503,7 @@ const deviceStats = computed(() => {
       value: globalStats.value.online,
       icon: LucideIcons.Wifi,
       color: '#10b981',
+      textColor: 'text-emerald-500',
       bgClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
       trend: [8, 9, 7, 10, 9, 11, 10, 12, 11, 13],
       change: 'Active',
@@ -534,6 +514,7 @@ const deviceStats = computed(() => {
       value: globalStats.value.offline,
       icon: LucideIcons.ZapOff,
       color: '#f43f5e',
+      textColor: 'text-rose-500',
       bgClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
       trend: [2, 3, 4, 3, 3, 3, 3, 3, 3, 3],
       change: 'Standby',
@@ -544,6 +525,7 @@ const deviceStats = computed(() => {
       value: (globalStats.value.top_vendor && typeof globalStats.value.top_vendor === 'string' && globalStats.value.top_vendor.length > 10) ? globalStats.value.top_vendor.substring(0, 8) + '..' : (globalStats.value.top_vendor || 'None'),
       icon: LucideIcons.Ticket,
       color: '#8b5cf6',
+      textColor: 'text-violet-500',
       bgClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
       trend: [5, 6, 5, 7, 6, 8, 7, 9, 8, 10],
       change: `count: ${globalStats.value.top_vendor_count}`,
@@ -554,8 +536,9 @@ const deviceStats = computed(() => {
 
 
 const fetchDevices = async () => {
+  loading.value = true
   try {
-    const res = await axios.get('/api/v1/devices/', {
+    const res = await api.get('/devices/', {
       params: {
         page: currentPage.value,
         limit: limit.value,
@@ -575,6 +558,8 @@ const fetchDevices = async () => {
   } catch (e) {
     notifyError('Failed to load devices')
     console.error(e)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -590,7 +575,7 @@ const debounceFetch = () => {
 const triggerScan = async () => {
   isScanning.value = true
   try {
-    await axios.post('/api/v1/scans/discovery')
+    await api.post('/scans/discovery')
     await new Promise(resolve => setTimeout(resolve, 2000))
     await fetchDevices()
   } catch (e) {
@@ -602,7 +587,7 @@ const triggerScan = async () => {
 
 const approveDevice = async (device) => {
   try {
-    await axios.patch(`/api/v1/devices/${device.id}`, { is_trusted: true })
+    await api.patch(`/devices/${device.id}`, { is_trusted: true })
     await fetchDevices()
     notifySuccess('Device approved successfully')
   } catch (e) {
@@ -617,7 +602,7 @@ const cancelDelete = () => { deviceToDelete.value = null }
 const deleteDevice = async () => {
   if (!deviceToDelete.value) return
   try {
-    await axios.delete(`/api/v1/devices/${deviceToDelete.value.id}`)
+    await api.delete(`/devices/${deviceToDelete.value.id}`)
     await fetchDevices()
     notifySuccess('Device deleted successfully')
     deviceToDelete.value = null
@@ -637,7 +622,7 @@ const handleDeviceSaved = async () => {
 
 const exportDevices = async () => {
   try {
-    const res = await axios.get('/api/v1/devices/export/json')
+    const res = await api.get('/devices/export/json')
     const dataStr = JSON.stringify(res.data, null, 2)
     const blob = new Blob([dataStr], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -657,7 +642,7 @@ const handleImport = async (event) => {
   try {
     const text = await file.text()
     const data = JSON.parse(text)
-    await axios.post('/api/v1/devices/import/json', data)
+    await api.post('/devices/import/json', data)
     await fetchDevices()
     notifySuccess('Devices imported successfully')
   } catch (e) {

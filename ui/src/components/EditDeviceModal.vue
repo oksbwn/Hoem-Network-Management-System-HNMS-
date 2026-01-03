@@ -165,7 +165,7 @@
                                                         <component :is="getIcon(d.icon)"
                                                             class="w-4 h-4 mr-2 opacity-70" />
                                                         <span class="truncate">{{ d.display_name || d.name || d.ip
-                                                            }}</span>
+                                                        }}</span>
                                                     </button>
                                                 </div>
                                             </PopoverPanel>
@@ -211,7 +211,7 @@ import {
     ChevronDown,
     Loader2
 } from 'lucide-vue-next'
-import axios from 'axios'
+import api from '@/utils/api'
 import { getIcon } from '@/utils/icons'
 import { useNotifications } from '@/composables/useNotifications'
 import { deviceTypes, availableIcons, typeToIconMap } from '@/constants/devices'
@@ -270,7 +270,7 @@ watch(() => form.value.device_type, (newType) => {
 
 const fetchAllDevices = async () => {
     try {
-        const res = await axios.get('/api/v1/devices/?limit=-1')
+        const res = await api.get('/devices/?limit=-1')
         allDevices.value = res.data.items || []
     } catch (e) {
         console.error('Failed to fetch devices:', e)
@@ -300,7 +300,7 @@ const saveDevice = async () => {
     if (!props.device) return
     isSaving.value = true
     try {
-        const response = await axios.patch(`/api/v1/devices/${props.device.id}`, form.value)
+        const response = await api.patch(`/devices/${props.device.id}`, form.value)
         notifySuccess('Device updated successfully')
         emit('save', response.data)
         closeModal()

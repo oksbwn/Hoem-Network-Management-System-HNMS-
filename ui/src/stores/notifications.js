@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
+import api from '@/utils/api'
 
 export const useNotificationStore = defineStore('notifications', () => {
   const events = ref([])
@@ -15,7 +15,7 @@ export const useNotificationStore = defineStore('notifications', () => {
   const fetchNotifications = async () => {
     isLoading.value = true
     try {
-      const response = await axios.get('/api/v1/events/', {
+      const response = await api.get('/events/', {
         params: { limit: 12 } // Fetch a few more
       })
       events.value = response.data

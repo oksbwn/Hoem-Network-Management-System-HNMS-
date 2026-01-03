@@ -13,12 +13,11 @@
         <nav class="flex-1 overflow-y-auto py-4 px-2">
           <ul class="space-y-1">
             <li v-for="item in navItems" :key="item.name">
-              <router-link :to="item.path"
-                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors group" :class="[
-                  $route.path === item.path || ($route.path.startsWith(item.path) && item.path !== '/')
-                    ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                ]" v-tooltip:right="sidebarCollapsed ? item.name : null">
+              <router-link :to="item.path" class="nav-item" :class="[
+                $route.path === item.path || ($route.path.startsWith(item.path) && item.path !== '/')
+                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+              ]" v-tooltip:right="sidebarCollapsed ? item.name : null">
                 <component :is="item.icon" class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" />
                 <span v-if="!sidebarCollapsed">{{ item.name }}</span>
               </router-link>
@@ -57,12 +56,11 @@
           <nav class="p-4">
             <ul class="space-y-1">
               <li v-for="item in navItems" :key="item.name">
-                <router-link :to="item.path" @click="mobileMenuOpen = false"
-                  class="flex items-center px-4 py-3 text-sm font-medium rounded-lg" :class="[
-                    $route.path === item.path || ($route.path.startsWith(item.path) && item.path !== '/')
-                      ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                  ]">
+                <router-link :to="item.path" @click="mobileMenuOpen = false" class="nav-item !px-4 !py-3" :class="[
+                  $route.path === item.path || ($route.path.startsWith(item.path) && item.path !== '/')
+                    ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                ]">
                   <component :is="item.icon" class="h-5 w-5 mr-3 flex-shrink-0" />
                   {{ item.name }}
                 </router-link>

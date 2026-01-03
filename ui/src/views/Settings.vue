@@ -1,15 +1,14 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="page-header">
       <div>
         <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Settings</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">System configuration and preferences</p>
       </div>
       <div class="flex items-center gap-2">
-        <button @click="saveSettings" :disabled="saveStatus === 'saving'"
-          class="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400"
-          :class="{ 'text-emerald-500 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20': saveStatus === 'saved' }"
+        <button @click="saveSettings" :disabled="saveStatus === 'saving'" class="btn-action"
+          :class="{ '!text-emerald-500 !dark:text-emerald-400 !border-emerald-200 !dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20': saveStatus === 'saved' }"
           v-tooltip="saveStatus === 'saved' ? 'Saved' : 'Save Configuration'">
           <Loader2 v-if="saveStatus === 'saving'" class="w-5 h-5 animate-spin" />
           <Check v-else-if="saveStatus === 'saved'" class="w-5 h-5" />
@@ -24,7 +23,7 @@
       <div class="lg:col-span-2 space-y-6">
 
         <!-- Automated Discovery -->
-        <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+        <div class="glass-panel">
           <div class="flex items-center gap-3 mb-6">
             <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
               <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
@@ -40,13 +39,12 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Left: Subnets -->
             <div class="space-y-3">
-              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <label class="label-caps">
                 Target Subnets
               </label>
               <div class="flex gap-2">
                 <input v-model="newSubnet" @keyup.enter="addSubnet" type="text" placeholder="e.g. 192.168.1.0/24"
-                  class="flex-1 px-3 py-2 border rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition-colors"
-                  :class="subnetError ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'" />
+                  class="input-base !pl-3" :class="{ 'border-red-500': subnetError }" />
                 <button @click="addSubnet"
                   class="p-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg hover:opacity-90 transition-opacity"
                   v-tooltip="'Add Subnet'">
@@ -56,8 +54,7 @@
               <p v-if="subnetError" class="text-xs text-red-500 font-medium animate-pulse">{{ subnetError }}</p>
 
               <div class="flex flex-wrap gap-2 pt-1">
-                <div v-for="s in subnetList" :key="s"
-                  class="flex items-center gap-2 px-2.5 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                <div v-for="s in subnetList" :key="s" class="badge-pill !px-3 !py-1 flex items-center gap-2">
                   <span>{{ s }}</span>
                   <button @click="removeSubnet(s)" class="text-slate-400 hover:text-red-500 transition-colors"
                     v-tooltip="'Remove Subnet'">
@@ -80,8 +77,7 @@
                   Scan Interval
                 </label>
                 <div class="relative">
-                  <select v-model="settings.scan_interval"
-                    class="w-full pl-3 pr-10 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm appearance-none">
+                  <select v-model="settings.scan_interval" class="box-input appearance-none">
                     <option value="300">Every 5 minutes</option>
                     <option value="600">Every 10 minutes</option>
                     <option value="1800">Every 30 minutes</option>
@@ -151,14 +147,12 @@
                 <label
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Broker
                   Address</label>
-                <input v-model="settings.mqtt_broker" type="text" placeholder="localhost"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                <input v-model="settings.mqtt_broker" type="text" placeholder="localhost" class="box-input" />
               </div>
               <div>
                 <label
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Port</label>
-                <input v-model="settings.mqtt_port" type="text" placeholder="1883"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                <input v-model="settings.mqtt_port" type="text" placeholder="1883" class="box-input" />
               </div>
             </div>
 
@@ -169,22 +163,20 @@
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Username
                   (Optional)</label>
                 <input v-model="settings.mqtt_username" type="text" placeholder="mqtt_user" autocomplete="off"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                  class="box-input" />
               </div>
               <div>
                 <label
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Password
                   (Optional)</label>
                 <input v-model="settings.mqtt_password" type="password" placeholder="••••••••"
-                  autocomplete="new-password"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                  autocomplete="new-password" class="box-input" />
               </div>
               <div>
                 <label
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Base
                   Topic</label>
-                <input v-model="settings.mqtt_base_topic" type="text" placeholder="network_scanner"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                <input v-model="settings.mqtt_base_topic" type="text" placeholder="network_scanner" class="box-input" />
               </div>
             </div>
           </div>
@@ -250,15 +242,13 @@
                 <label
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Router
                   URL</label>
-                <input v-model="settings.openwrt_url" type="text" placeholder="http://192.168.1.1"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                <input v-model="settings.openwrt_url" type="text" placeholder="http://192.168.1.1" class="box-input" />
               </div>
               <div>
                 <label
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Interval
                   (Minutes)</label>
-                <input v-model="settings.openwrt_interval" type="number" placeholder="15"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                <input v-model="settings.openwrt_interval" type="number" placeholder="15" class="box-input" />
               </div>
             </div>
 
@@ -268,15 +258,13 @@
                 <label
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">RPC
                   Username</label>
-                <input v-model="settings.openwrt_username" type="text" placeholder="root"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                <input v-model="settings.openwrt_username" type="text" placeholder="root" class="box-input" />
               </div>
               <div>
                 <label
                   class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">RPC
                   Password (Optional)</label>
-                <input v-model="settings.openwrt_password" type="password" placeholder="••••••••"
-                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                <input v-model="settings.openwrt_password" type="password" placeholder="••••••••" class="box-input" />
               </div>
             </div>
           </div>
@@ -287,7 +275,7 @@
       <div class="space-y-6">
 
         <!-- UI Appearance -->
-        <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+        <div class="glass-panel">
           <div class="flex items-center gap-3 mb-6">
             <div class="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-emerald-600 dark:text-emerald-400">
               <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
@@ -302,7 +290,7 @@
           </div>
           <div class="space-y-4">
             <label
-              class="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-600 w-full md:w-auto">
+              class="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover-row border border-transparent hover:border-slate-200 dark:hover:border-slate-600 w-full md:w-auto">
               <div class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
                 :class="settings.hide_offline === 'true' ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'">
                 <input type="checkbox" v-model="settings.hide_offline" true-value="true" false-value="false"
@@ -319,7 +307,7 @@
         </div>
 
         <!-- Discovery Metrics -->
-        <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+        <div class="glass-panel">
           <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-4">Discovery Metrics</h3>
           <div v-if="gist" class="space-y-4">
             <div class="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700">
@@ -342,7 +330,7 @@
         </div>
 
         <!-- Port Lookup Engine -->
-        <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+        <div class="glass-panel">
           <div class="flex items-center gap-3 mb-4">
             <div class="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400">
               <Search class="w-5 h-5" />
@@ -373,7 +361,7 @@
         </div>
 
         <!-- Database Management -->
-        <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+        <div class="glass-panel">
           <div class="flex items-center gap-3 mb-4">
             <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
               <Database class="w-5 h-5" />
@@ -385,13 +373,11 @@
           </div>
 
           <div class="space-y-3">
-            <button @click="downloadBackup"
-              class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold transition-all shadow-sm">
+            <button @click="downloadBackup" class="btn-outline">
               <Download class="w-4 h-4" />
               <span>Download Backup</span>
             </button>
-            <button @click="triggerRestore"
-              class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold transition-all shadow-sm">
+            <button @click="triggerRestore" class="btn-outline">
               <Upload class="w-4 h-4" />
               <span>Restore Database</span>
             </button>
@@ -401,17 +387,14 @@
 
         <!-- System Maintenance -->
 
-        <div class="bg-white dark:bg-slate-800 rounded-lg border border-red-200 dark:border-red-900/20 p-4">
+        <div class="glass-panel border-red-200 dark:border-red-900/20">
           <h3 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">System Maintenance</h3>
           <p class="text-xs text-slate-500 mb-4">Cleanup tools and data management</p>
           <div class="flex items-center gap-2">
-            <button @click="clearAllData"
-              class="p-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-              v-tooltip="'Factory Reset (Delete All Data)'">
+            <button @click="clearAllData" class="btn-danger" v-tooltip="'Factory Reset (Delete All Data)'">
               <Trash2 class="w-5 h-5" />
             </button>
-            <button @click="resetConfig" :disabled="loading"
-              class="p-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            <button @click="resetConfig" :disabled="loading" class="btn-action !p-2"
               v-tooltip="'Restore Default Configuration'">
               <RotateCcw class="w-5 h-5" :class="{ 'animate-spin': loading }" />
             </button>
@@ -430,8 +413,7 @@
       <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="closeConfirmation"></div>
 
       <!-- Modal Card -->
-      <div
-        class="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-700 transform transition-all scale-100 opacity-100">
+      <div class="modal-container-sm">
         <div class="flex flex-col items-center text-center">
           <div class="h-12 w-12 rounded-full flex items-center justify-center mb-4"
             :class="confirmModal.type === 'delete' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'">
@@ -467,8 +449,7 @@
     <div class="flex min-h-screen items-center justify-center p-4 text-center">
       <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-md transition-opacity"></div>
 
-      <div
-        class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-8 border border-slate-200 dark:border-slate-700 transform transition-all">
+      <div class="modal-container-sm !max-w-md !p-8">
         <div class="flex flex-col items-center">
           <div class="relative mb-6">
             <div class="absolute inset-0 bg-blue-500/20 rounded-full blur-xl animate-pulse"></div>
@@ -489,7 +470,7 @@
 
           <div v-if="!maintenanceSuccess"
             class="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden relative">
-            <div class="absolute top-0 bottom-0 left-0 bg-blue-500 animate-progress-indeterminate" style="width: 50%">
+            <div class="absolute top-0 bottom-0 left-0 bg-blue-500 animate-progress-indeterminate w-1/2">
             </div>
           </div>
 
@@ -506,8 +487,7 @@
     <div class="flex min-h-screen items-center justify-center p-4">
       <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="isRulesModalOpen = false">
       </div>
-      <div
-        class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-700">
+      <div class="modal-container">
         <!-- Header -->
         <div
           class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/20">
@@ -684,7 +664,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch, onUnmounted } from 'vue'
-import axios from 'axios'
+import api from '@/utils/api'
 import * as LucideIcons from 'lucide-vue-next'
 import { Save, RotateCcw, Trash2, AlertTriangle, Loader2, Plus, Fingerprint, Pencil, Trash, X, Check, Search, ShieldCheck, Tag, Settings2, Layout, ChevronDown, Download, Upload, Database } from 'lucide-vue-next'
 
@@ -809,7 +789,7 @@ const removeSubnet = (s) => {
 
 const fetchSettings = async () => {
   try {
-    const res = await axios.get('/api/v1/config/')
+    const res = await api.get('/config/')
     const mapping = {}
     res.data.forEach(item => {
       mapping[item.key] = item.value
@@ -833,7 +813,7 @@ const fetchSettings = async () => {
 
     // Fetch OpenWRT specific config
     try {
-      const owRes = await axios.get('/api/v1/integrations/openwrt/config')
+      const owRes = await api.get('/integrations/openwrt/config')
       if (owRes.data) {
         settings.openwrt_url = owRes.data.url
         settings.openwrt_username = owRes.data.username
@@ -851,7 +831,7 @@ const fetchSettings = async () => {
 const fetchRules = async () => {
   rulesLoading.value = true
   try {
-    const res = await axios.get('/api/v1/classification/')
+    const res = await api.get('/classification/')
     rules.value = res.data
   } catch (e) {
     notifyError('Failed to fetch classification rules')
@@ -888,10 +868,10 @@ const saveRule = async () => {
     ruleForm.ports = ports
 
     if (editingRule.value) {
-      await axios.put(`/api/v1/classification/${editingRule.value}`, ruleForm)
+      await api.put(`/classification/${editingRule.value}`, ruleForm)
       notifySuccess('Rule updated successfully')
     } else {
-      await axios.post('/api/v1/classification/', ruleForm)
+      await api.post('/classification/', ruleForm)
       notifySuccess('Rule created successfully')
     }
     isRuleFormOpen.value = false
@@ -904,7 +884,7 @@ const saveRule = async () => {
 const deleteRule = async (id) => {
   if (!confirm('Are you sure you want to delete this rule?')) return
   try {
-    await axios.delete(`/api/v1/classification/${id}`)
+    await api.delete(`/classification/${id}`)
     notifySuccess('Rule deleted successfully')
     fetchRules()
   } catch (e) {
@@ -914,7 +894,7 @@ const deleteRule = async (id) => {
 
 const fetchGist = async () => {
   try {
-    const res = await axios.get('/api/v1/scans/gist')
+    const res = await api.get('/scans/gist')
     gist.value = res.data
   } catch (e) {
     console.error(e)
@@ -924,7 +904,7 @@ const fetchGist = async () => {
 const testOpenWRT = async () => {
   testOpenWrtLoading.value = true
   try {
-    await axios.post('/api/v1/integrations/openwrt/verify', {
+    await api.post('/integrations/openwrt/verify', {
       url: settings.openwrt_url,
       username: settings.openwrt_username,
       password: settings.openwrt_password
@@ -942,7 +922,7 @@ const testOpenWRT = async () => {
 const syncOpenWRT = async () => {
   syncOpenWrtLoading.value = true
   try {
-    await axios.post('/api/v1/integrations/openwrt/sync')
+    await api.post('/integrations/openwrt/sync')
     notifySuccess("Sync started! Check device list shortly.")
   } catch (e) {
     notifyError("Sync Failed: " + (e.response?.data?.detail || e.message))
@@ -954,11 +934,11 @@ const syncOpenWRT = async () => {
 const saveSettings = async () => {
   saveStatus.value = 'saving'
   try {
-    await axios.post('/api/v1/config/', settings)
+    await api.post('/config/', settings)
 
     // Save OpenWRT config separately only if URL is provided
     if (settings.openwrt_url) {
-      const owRes = await axios.post('/api/v1/integrations/openwrt/config', {
+      const owRes = await api.post('/integrations/openwrt/config', {
         url: settings.openwrt_url,
         username: settings.openwrt_username,
         password: settings.openwrt_password,
@@ -981,7 +961,7 @@ const saveSettings = async () => {
 
 const fetchMqttStatus = async () => {
   try {
-    const res = await axios.get('/api/v1/mqtt/status')
+    const res = await api.get('/mqtt/status')
     mqttStatus.value = res.data.status
   } catch (e) {
     console.error("Failed to fetch MQTT status")
@@ -991,7 +971,7 @@ const fetchMqttStatus = async () => {
 const testMqtt = async () => {
   testLoading.value = true
   try {
-    const res = await axios.post('/api/v1/mqtt/test', {
+    const res = await api.post('/mqtt/test', {
       broker: settings.mqtt_broker,
       port: parseInt(settings.mqtt_port),
       username: settings.mqtt_username,
@@ -1046,8 +1026,8 @@ const confirmAction = async () => {
 
   try {
     if (confirmModal.type === 'delete') {
-      await axios.delete('/api/v1/devices/')
-      await axios.delete('/api/v1/scans/')
+      await api.delete('/devices/')
+      await api.delete('/scans/')
       window.location.reload()
     } else if (confirmModal.type === 'reset') {
       // Reset local state to defaults
@@ -1062,7 +1042,7 @@ const confirmAction = async () => {
       subnetList.value = []
 
       // Save these defaults
-      await axios.post('/api/v1/config/', settings)
+      await api.post('/config/', settings)
 
       // Re-fetch to confirm
       await fetchSettings()
@@ -1077,7 +1057,7 @@ const confirmAction = async () => {
         const formData = new FormData()
         formData.append('file', file)
 
-        await axios.post('/api/v1/system/restore', formData, {
+        await api.post('/system/restore', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
 
@@ -1117,7 +1097,7 @@ const downloadBackup = async () => {
   maintenanceStatus.value = 'Generating database checkpoint...'
 
   try {
-    const response = await axios.get('/api/v1/system/backup', {
+    const response = await api.get('/system/backup', {
       responseType: 'blob'
     })
 

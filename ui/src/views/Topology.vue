@@ -1,6 +1,5 @@
 <template>
-    <div
-        class="h-[calc(100vh-120px)] bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 relative overflow-hidden">
+    <div class="premium-card !p-0 h-[calc(100vh-120px)] overflow-hidden">
 
         <!-- Loading State -->
         <div v-if="loading"
@@ -17,7 +16,7 @@
                     class="transition-all duration-300" :class="{ 'filter drop-shadow-lg': true }" />
                 <!-- Icon Scaling -->
                 <foreignObject :x="-(config.radius || 20)" :y="-(config.radius || 20)"
-                    :width="(config.radius || 20) * 2" :height="(config.radius || 20) * 2" style="pointer-events: none">
+                    :width="(config.radius || 20) * 2" :height="(config.radius || 20) * 2" class="pointer-events-none">
                     <div class="flex items-center justify-center h-full w-full text-white">
                         <component :is="getIcon(nodes[nodeId].icon)" :size="(config.radius || 20) * 1.2"
                             stroke-width="2" />
@@ -27,9 +26,9 @@
 
             <!-- Tooltip / Label -->
             <template #override-node-label="{ nodeId, scale, config, text }">
-                <text x="0" :y="(config.radius || 20) + 20" :font-size="14 * scale" text-anchor="middle"
-                    fill="currentColor" class="text-slate-700 dark:text-slate-300 font-medium pointer-events-none"
-                    :style="{ fontSize: (12 / scale) + 'px' }">
+                <text x="0" :y="(config.radius || 20) + 20" text-anchor="middle" fill="currentColor"
+                    class="text-slate-700 dark:text-slate-300 font-medium pointer-events-none"
+                    :class="`text-[${Math.round(12 / scale)}px]`">
                     {{ text }}
                 </text>
             </template>
@@ -37,17 +36,14 @@
 
         <!-- Controls -->
         <div
-            class="absolute bottom-4 right-4 flex flex-col gap-2 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
-            <button @click="zoomIn"
-                class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400">
+            class="absolute bottom-4 right-4 flex flex-col gap-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg p-2 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-10">
+            <button @click="zoomIn" class="btn-action !p-2" v-tooltip="'Zoom In'">
                 <Plus class="h-5 w-5" />
             </button>
-            <button @click="zoomOut"
-                class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400">
+            <button @click="zoomOut" class="btn-action !p-2" v-tooltip="'Zoom Out'">
                 <Minus class="h-5 w-5" />
             </button>
-            <button @click="fetchTopology"
-                class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-400">
+            <button @click="fetchTopology" class="btn-action !p-2" v-tooltip="'Reset View'">
                 <RefreshCw class="h-5 w-5" :class="{ 'animate-spin': loading }" />
             </button>
         </div>
@@ -58,6 +54,7 @@
 import { ref, onMounted, reactive } from "vue"
 import * as vNG from "v-network-graph"
 import { ForceLayout } from "v-network-graph/lib/force-layout"
+import api from '@/utils/api'
 import { getIcon } from '@/utils/icons'
 import {
     Loader2, Plus, Minus, RefreshCw,
@@ -121,12 +118,9 @@ const configs = reactive(
 const fetchTopology = async () => {
     loading.value = true
     try {
-        const res = await fetch("/api/v1/topology/")
-        if (res.ok) {
-            const data = await res.json()
-            nodes.value = data.nodes
-            edges.value = data.edges
-        }
+        const res = await api.get("/topology/")
+        nodes.value = res.data.nodes
+        edges.value = res.data.edges
     } catch (e) {
         console.error("Failed to load topology", e)
     } finally {

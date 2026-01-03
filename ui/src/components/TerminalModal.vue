@@ -1,9 +1,8 @@
 <template>
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div
-            class="bg-gray-900 rounded-lg shadow-2xl w-full max-w-4xl border border-gray-700 overflow-hidden flex flex-col h-[80vh]">
+        <div class="terminal-panel">
             <!-- Header -->
-            <div class="px-4 py-3 bg-gray-800 border-b border-gray-700 flex justify-between items-center shrink-0">
+            <div class="terminal-header">
                 <div class="flex items-center space-x-2">
                     <div class="h-3 w-3 rounded-full bg-red-500"></div>
                     <div class="h-3 w-3 rounded-full bg-yellow-500"></div>
@@ -25,14 +24,11 @@
                     <h3 class="text-white text-lg font-bold text-center">SSH Credentials</h3>
                     <div>
                         <label class="block text-xs font-mono text-gray-400 mb-1">Username</label>
-                        <input v-model="username" type="text"
-                            class="w-full bg-gray-800 border-gray-700 text-white rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="pi" />
+                        <input v-model="username" type="text" class="terminal-input" placeholder="pi" />
                     </div>
                     <div>
                         <label class="block text-xs font-mono text-gray-400 mb-1">Password</label>
-                        <input v-model="password" type="password"
-                            class="w-full bg-gray-800 border-gray-700 text-white rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input v-model="password" type="password" class="terminal-input" />
                     </div>
                     <button @click="connect" :disabled="connecting"
                         class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 font-bold disabled:opacity-50">

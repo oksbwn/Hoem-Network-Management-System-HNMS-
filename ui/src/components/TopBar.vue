@@ -23,8 +23,8 @@
                         <SearchIcon class="h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     </div>
                     <input v-model="searchStore.searchQuery" type="text" placeholder="Search devices..."
-                        class="block w-full pl-10 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all dark:text-slate-200"
-                        @input="handleInput" @focus="showResults = true" @keyup.enter="goToDevices" />
+                        class="search-input-pill" @input="handleInput" @focus="showResults = true"
+                        @keyup.enter="goToDevices" />
                     <div v-if="searchStore.searchQuery" class="absolute inset-y-0 right-0 pr-3 flex items-center">
                         <button @click="clearSearch"
                             class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -77,8 +77,7 @@
 
                             <div v-else-if="searchStore.searchQuery.length >= 2"
                                 class="p-8 text-center bg-slate-50/50 dark:bg-slate-800/50">
-                                <div
-                                    class="mx-auto w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3">
+                                <div class="icon-box-lg">
                                     <SearchIcon class="h-6 w-6 text-slate-400" />
                                 </div>
                                 <p class="text-sm text-slate-900 dark:text-slate-100 font-medium">No matching devices
@@ -93,11 +92,9 @@
                 <!-- Right: Actions -->
                 <div class="flex items-center gap-2">
                     <!-- Quick Status (Hidden on Mobile) -->
-                    <div
-                        class="hidden lg:flex items-center gap-1.5 mr-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full border border-emerald-100 dark:border-emerald-800/50">
+                    <div class="hidden lg:flex badge-live-label">
                         <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span
-                            class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Live</span>
+                        <span>Live</span>
                     </div>
 
                     <div class="relative" v-click-outside="() => showNotifications = false">
@@ -141,10 +138,9 @@
                                     </div>
                                     <div v-else>
                                         <button v-for="event in notificationStore.events" :key="event.id"
-                                            @click="goToEvent(event)"
-                                            class="w-full px-4 py-3 flex gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left border-b border-slate-50 dark:border-slate-700/50 last:border-0 relative">
+                                            @click="goToEvent(event)" class="notif-item">
                                             <div v-if="new Date(event.changed_at) > new Date(notificationStore.lastViewed)"
-                                                class="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-full">
+                                                class="notif-indicator">
                                             </div>
                                             <div class="flex-shrink-0">
                                                 <div :class="event.status === 'online' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'"

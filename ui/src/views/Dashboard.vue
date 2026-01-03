@@ -1,15 +1,13 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="page-header">
       <div>
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">Dashboard</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Network overview and real-time monitoring</p>
       </div>
       <div class="flex items-center gap-3">
-        <button @click="fetchAllData"
-          class="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 shadow-sm"
-          v-tooltip="'Refresh All Data'">
+        <button @click="fetchAllData" class="btn-action !rounded-xl p-2.5" v-tooltip="'Refresh All Data'">
           <RefreshCw class="w-5 h-5" :class="{ 'animate-spin': loading }" />
         </button>
       </div>
@@ -17,8 +15,7 @@
 
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div v-for="stat in mainStats" :key="stat.label"
-        class="relative overflow-hidden bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-xl transition-all group shadow-sm">
+      <div v-for="stat in mainStats" :key="stat.label" class="card-stat group">
 
         <!-- Decoration -->
         <div
@@ -38,10 +35,10 @@
         </div>
 
         <div class="mt-4 relative z-10">
-          <p class="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+          <p class="heading-xl">
             {{ stat.value }}
           </p>
-          <p class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-2 opacity-80">
+          <p class="subtext-caps">
             {{ stat.label }}
           </p>
         </div>
@@ -50,7 +47,7 @@
 
     <!-- Insights Row -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-blue-600 rounded-2xl p-4 text-white flex items-center gap-4 relative overflow-hidden group">
+      <div class="insight-card bg-blue-600 group">
         <div class="p-3 bg-white/20 rounded-xl">
           <Layers class="w-6 h-6" />
         </div>
@@ -64,8 +61,7 @@
         </div>
       </div>
 
-      <div
-        class="bg-emerald-600 rounded-2xl p-4 text-white flex items-center gap-4 relative overflow-hidden group font-medium">
+      <div class="insight-card bg-emerald-600 font-medium group">
         <div class="p-3 bg-white/20 rounded-xl">
           <ShieldCheck class="w-6 h-6" />
         </div>
@@ -80,12 +76,12 @@
         </div>
       </div>
 
-      <div class="bg-slate-800 rounded-2xl p-4 text-white flex items-center gap-4 relative overflow-hidden group">
+      <div class="insight-card bg-slate-800 group">
         <div class="p-3 bg-white/10 rounded-xl">
           <RefreshCw class="w-6 h-6" />
         </div>
         <div class="relative z-10">
-          <p class="text-[10px] font-black uppercase tracking-widest opacity-70">Discovery System</p>
+          <p class="subtext-caps !opacity-70">Discovery System</p>
           <p class="text-lg font-bold">Automatic Scan <span class="text-xs font-normal opacity-60 ml-1">Active</span>
           </p>
         </div>
@@ -150,7 +146,7 @@
           <div v-for="(item, index) in distributionData.types.slice(0, 4)" :key="item.label"
             class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: distributionOptions.colors[index] }"></div>
+              <div class="w-2 h-2 rounded-full" :class="categoryColorClasses[index]"></div>
               <span class="text-xs text-slate-600 dark:text-slate-400 capitalize">{{ item.label }}</span>
             </div>
             <span class="text-xs font-bold text-slate-900 dark:text-white">{{ item.value }}</span>
@@ -257,7 +253,7 @@
 
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue'
-import axios from 'axios'
+import api from '@/utils/api'
 import * as LucideIcons from 'lucide-vue-next'
 import {
   Database, Wifi, WifiOff, ShieldAlert, Activity, RefreshCw,
@@ -316,6 +312,15 @@ const mainStats = computed(() => [
     trendColor: globalStats.value.untrusted > 0 ? 'text-rose-600' : 'text-emerald-600'
   }
 ])
+
+const categoryColorClasses = [
+  'bg-blue-500',
+  'bg-emerald-500',
+  'bg-amber-500',
+  'bg-red-500',
+  'bg-violet-500',
+  'bg-cyan-500'
+]
 
 const getIcon = (name) => {
   if (!name) return HelpCircle
@@ -419,11 +424,11 @@ const fetchAllData = async () => {
   loading.value = true
   try {
     const [devs, traffic, dist, events, top] = await Promise.all([
-      axios.get('/api/v1/devices/'),
-      axios.get('/api/v1/analytics/traffic?range=24h'),
-      axios.get('/api/v1/analytics/distribution'),
-      axios.get('/api/v1/events/?limit=5'),
-      axios.get('/api/v1/analytics/top-devices?limit=5')
+      api.get('/devices/'),
+      api.get('/analytics/traffic?range=24h'),
+      api.get('/analytics/distribution'),
+      api.get('/events/?limit=5'),
+      api.get('/analytics/top-devices?limit=5')
     ])
 
     if (devs.data.global_stats) globalStats.value = devs.data.global_stats

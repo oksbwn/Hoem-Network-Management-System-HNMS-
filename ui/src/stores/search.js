@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import axios from 'axios'
+import api from '@/utils/api'
 
 export const useSearchStore = defineStore('search', () => {
   const searchQuery = ref('')
@@ -30,7 +30,7 @@ export const useSearchStore = defineStore('search', () => {
 
     isLoading.value = true
     try {
-      const res = await axios.get('/api/v1/devices/', {
+      const res = await api.get('/devices/', {
         params: {
           search: searchQuery.value,
           limit: 8

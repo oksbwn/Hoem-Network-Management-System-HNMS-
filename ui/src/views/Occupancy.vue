@@ -1,13 +1,13 @@
 <template>
     <div class="space-y-6 overflow-hidden">
         <!-- Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="page-header relative z-20">
             <div>
                 <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">IP Occupancy</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Network map for {{ selectedSubnet }}.0/24</p>
             </div>
             <div
-                class="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm hover:border-blue-400/50 transition-colors group w-full sm:w-auto">
+                class="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 glass-panel !px-4 !py-3 shadow-sm hover:border-blue-400/50 group w-full sm:w-auto">
                 <div class="hidden sm:block">
                     <Network class="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
                 </div>
@@ -20,7 +20,7 @@
                         <div class="relative flex-1 md:flex-none md:min-w-[140px]"
                             v-click-outside="() => isFilterOpen = false">
                             <button @click="isFilterOpen = !isFilterOpen"
-                                class="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-blue-400/50 hover:shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20 active:scale-[0.98]">
+                                class="btn-action w-full flex items-center justify-between !py-2 !px-3 font-medium">
                                 <span class="truncate mr-2">
                                     {{ filterStatus === 'all' ? 'All' : (filterStatus === 'online'
                                         ? 'Online'
@@ -36,11 +36,9 @@
                                 leave-active-class="transition duration-75 ease-in"
                                 leave-from-class="transform scale-100 opacity-100"
                                 leave-to-class="transform scale-95 opacity-0">
-                                <div v-if="isFilterOpen"
-                                    class="absolute z-50 top-full left-0 mt-2 w-full min-w-[140px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden py-1">
+                                <div v-if="isFilterOpen" class="dropdown-menu top-full left-0 w-full min-w-[140px]">
                                     <button v-for="opt in ['all', 'online', 'offline', 'available']" :key="opt"
-                                        @click="filterStatus = opt; isFilterOpen = false"
-                                        class="w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                                        @click="filterStatus = opt; isFilterOpen = false" class="dropdown-item group"
                                         :class="filterStatus === opt ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-600 dark:text-slate-300'">
                                         <span class="capitalize">{{ opt }}</span>
                                         <Check v-if="filterStatus === opt" class="w-3.5 h-3.5" />
@@ -53,7 +51,7 @@
                         <div class="relative flex-1 md:flex-none md:min-w-[180px]"
                             v-click-outside="() => isSubnetOpen = false">
                             <button @click="isSubnetOpen = !isSubnetOpen"
-                                class="w-full flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-blue-400/50 hover:shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20 active:scale-[0.98]">
+                                class="btn-action w-full flex items-center justify-between !py-2 !px-4 font-medium">
                                 <span class="truncate mr-2">
                                     {{ selectedSubnet ? `${selectedSubnet}.0/24` : 'Subnet' }}
                                 </span>
@@ -68,10 +66,9 @@
                                 leave-from-class="transform scale-100 opacity-100"
                                 leave-to-class="transform scale-95 opacity-0">
                                 <div v-if="isSubnetOpen"
-                                    class="absolute z-50 top-full left-0 mt-2 w-full min-w-[200px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden py-1 max-h-60 overflow-y-auto custom-scrollbar">
+                                    class="dropdown-menu top-full left-0 w-full min-w-[200px] max-h-60 overflow-y-auto custom-scrollbar">
                                     <button v-for="sub in availableSubnets" :key="sub"
-                                        @click="selectedSubnet = sub; isSubnetOpen = false"
-                                        class="w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                                        @click="selectedSubnet = sub; isSubnetOpen = false" class="dropdown-item group"
                                         :class="selectedSubnet === sub ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-600 dark:text-slate-300'">
                                         <span class="font-mono">{{ sub }}.0/24</span>
                                         <Check v-if="selectedSubnet === sub" class="w-3.5 h-3.5" />
@@ -80,8 +77,7 @@
                             </transition>
                         </div>
                         <button @click="fetchOccupancy" :disabled="loading"
-                            class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 whitespace-nowrap flex-none"
-                            v-tooltip="'Refresh Occupancy Data'">
+                            class="btn-action whitespace-nowrap flex-none !px-3" v-tooltip="'Refresh Occupancy Data'">
                             <component :is="refreshIcon" class="w-5 h-5"
                                 :class="{ 'animate-spin': loading, 'text-emerald-500': showSuccess }" />
                         </button>
@@ -92,8 +88,7 @@
 
         <!-- Summary Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div v-for="stat in summaryStats" :key="stat.label"
-                class="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-700 p-4 hover:shadow-xl transition-all flex flex-col justify-between overflow-hidden group min-h-[100px] min-w-0">
+            <div v-for="stat in summaryStats" :key="stat.label" class="card-stat min-w-0">
 
                 <!-- Sparkline Background -->
                 <Sparkline :data="stat.trend" :color="stat.color" class="opacity-15" />
@@ -103,8 +98,7 @@
                     <div :class="[stat.bgClass, 'p-1.5 rounded-lg shadow-sm border border-white/10']">
                         <component :is="stat.icon" class="h-4 w-4" />
                     </div>
-                    <div
-                        class="flex items-center gap-1 bg-white/50 dark:bg-slate-900/40 px-2 py-0.5 rounded-full backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+                    <div class="badge-pill !px-2 !py-0.5">
                         <span
                             :class="[stat.changeType === 'up' ? 'text-emerald-600' : 'text-rose-500', 'text-[10px] font-bold']">
                             {{ stat.changeType === 'down' ? '↓' : '↑' }} {{ stat.change }}
@@ -114,11 +108,10 @@
 
                 <!-- Center Content: Metric & Label -->
                 <div class="relative z-10 flex flex-col items-center text-center -mt-1">
-                    <p class="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                    <p class="heading-xl">
                         {{ stat.value }}
                     </p>
-                    <p :style="{ color: stat.color }"
-                        class="text-[9px] font-black uppercase tracking-[0.2em] opacity-80 mt-1">
+                    <p :class="stat.textColor" class="subtext-caps">
                         {{ stat.label }}
                     </p>
                 </div>
@@ -147,7 +140,7 @@
                                     </span>
                                 </div>
                                 <div v-if="getDevice((rowIndex - 1) * 32 + i)"
-                                    class="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] p-3 rounded-lg shadow-xl z-50 w-52">
+                                    class="hover-popover bottom-full mb-2 left-1/2 -translate-x-1/2 w-52">
                                     <div class="font-semibold truncate text-xs">{{ getDevice((rowIndex - 1) * 32 +
                                         i).display_name || getDevice((rowIndex - 1) * 32 + i).ip }}</div>
                                     <div class="text-[10px] opacity-75 font-mono truncate mt-1">{{ getDevice((rowIndex -
@@ -185,7 +178,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import axios from 'axios'
+import api from '@/utils/api'
 import { useRouter } from 'vue-router'
 import { Network, ChevronDown, Database, Wifi, ZapOff, CheckCircle, RefreshCw, Check } from 'lucide-vue-next'
 import Sparkline from '@/components/Sparkline.vue'
@@ -197,22 +190,6 @@ const selectedSubnet = ref('')
 const isSubnetOpen = ref(false)
 const filterStatus = ref('all')
 const isFilterOpen = ref(false)
-
-
-
-const vClickOutside = {
-    mounted(el, binding) {
-        el._clickOutside = (event) => {
-            if (!(el === event.target || el.contains(event.target))) {
-                binding.value(event)
-            }
-        }
-        document.addEventListener('click', el._clickOutside)
-    },
-    unmounted(el) {
-        document.removeEventListener('click', el._clickOutside)
-    }
-}
 
 const availableSubnets = computed(() => {
     const subnets = new Set()
@@ -248,6 +225,7 @@ const summaryStats = computed(() => {
             value: usedCount,
             icon: Database,
             color: '#3b82f6',
+            textColor: 'text-blue-500',
             bgClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
             trend: [10, 12, 11, 13, 12, 14, 13],
             change: '2.4%',
@@ -258,6 +236,7 @@ const summaryStats = computed(() => {
             value: onlineCount,
             icon: Wifi,
             color: '#10b981',
+            textColor: 'text-emerald-500',
             bgClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
             trend: [8, 9, 7, 10, 9, 11, 10],
             change: '5.2%',
@@ -268,6 +247,7 @@ const summaryStats = computed(() => {
             value: offlineCount,
             icon: ZapOff,
             color: '#f43f5e',
+            textColor: 'text-rose-500',
             bgClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
             trend: [2, 3, 4, 3, 3, 3, 3],
             change: '3.1%',
@@ -278,6 +258,7 @@ const summaryStats = computed(() => {
             value: freeCount,
             icon: CheckCircle,
             color: '#8b5cf6',
+            textColor: 'text-violet-500',
             bgClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
             trend: [244, 242, 243, 241, 242, 240, 241],
             change: '0.8%',
@@ -339,7 +320,7 @@ const refreshIcon = computed(() => showSuccess.value ? CheckCircle : RefreshCw)
 const fetchOccupancy = async () => {
     loading.value = true
     try {
-        const res = await axios.get('/api/v1/devices/export/json')
+        const res = await api.get('/devices/export/json')
         devices.value = res.data.items || res.data
 
         // Show success state

@@ -11,8 +11,8 @@
 
             <!-- Main Path -->
             <path :d="path" fill="none" :stroke="color" stroke-width="1.2" stroke-linecap="round"
-                stroke-linejoin="round" class="transition-all duration-1000 ease-out"
-                :style="{ strokeDasharray: 1000, strokeDashoffset: isVisible ? 0 : 1000 }" />
+                stroke-linejoin="round" class="transition-all duration-1000 ease-out [stroke-dasharray:1000]"
+                :class="isVisible ? '[stroke-dashoffset:0]' : '[stroke-dashoffset:1000]'" />
 
             <defs>
                 <linearGradient :id="`gradient-${uniqueId}`" x1="0%" y1="0%" x2="0%" y2="100%">

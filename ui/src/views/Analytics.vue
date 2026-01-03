@@ -10,8 +10,7 @@
             </div>
 
             <!-- Time Range Picker -->
-            <div class="flex flex-wrap gap-1 bg-white dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700 shadow-sm"
-                v-if="localConfigured">
+            <div class="selection-bar" v-if="localConfigured">
                 <button v-for="r in ['24h', 'yesterday', '7d', '30d', '3m', 'mtd', 'last_month', 'ytd', '1y', 'all']"
                     :key="r" @click="timeRange = r"
                     class="px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap"
@@ -37,8 +36,7 @@
                     class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-blue-600">nlbwmon</code>
                 package.
             </p>
-            <router-link to="/settings"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+            <router-link to="/settings" class="btn-primary">
                 <Settings class="w-4 h-4" />
                 Configure Integration
             </router-link>
@@ -63,18 +61,16 @@
             <!-- Key Metrics -->
             <!-- Active Devices Count Fix -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div
-                    class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                <div class="card-base">
                     <div class="absolute right-0 top-0 p-4 opacity-5">
                         <Download class="w-16 h-16" />
                     </div>
                     <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                         Total Download</p>
                     <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatBytes(trafficTotals.download)
-                        }}</p>
+                    }}</p>
                 </div>
-                <div
-                    class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                <div class="card-base">
                     <div class="absolute right-0 top-0 p-4 opacity-5">
                         <Upload class="w-16 h-16" />
                     </div>
@@ -83,8 +79,7 @@
                     <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ formatBytes(trafficTotals.upload) }}
                     </p>
                 </div>
-                <div
-                    class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                <div class="card-base">
                     <div class="absolute right-0 top-0 p-4 opacity-5">
                         <Users class="w-16 h-16" />
                     </div>
@@ -92,8 +87,7 @@
                         Active Devices</p>
                     <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ trafficTotals.active_devices }}</p>
                 </div>
-                <div
-                    class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                <div class="card-base">
                     <div class="absolute right-0 top-0 p-4 opacity-5">
                         <Activity class="w-16 h-16" />
                     </div>
@@ -135,16 +129,14 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Top Consumers List (Moved here, resized) -->
-                <div
-                    class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+                <div class="premium-card !p-0 shadow-sm flex flex-col">
                     <div class="p-6 border-b border-slate-100 dark:border-slate-700">
                         <h3 class="text-base font-semibold text-slate-900 dark:text-white">Top Consumers</h3>
                     </div>
                     <div class="flex-1 overflow-y-auto max-h-[350px] p-4 space-y-4 custom-scrollbar">
                         <div v-for="(device, idx) in topDevices" :key="device.id" class="flex items-center gap-3 group">
                             <div class="w-6 text-center text-xs font-bold text-slate-400">#{{ idx + 1 }}</div>
-                            <div
-                                class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400">
+                            <div class="icon-box-sm">
                                 <component :is="getIcon(device.icon || 'help-circle')" class="w-5 h-5" />
                             </div>
                             <div class="flex-1 min-w-0">
@@ -156,7 +148,7 @@
                                 </div>
                                 <div class="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                     <div class="h-full bg-blue-500 rounded-full"
-                                        :style="{ width: getUsagePercent(device.total) + '%' }"></div>
+                                        :class="`w-[${Math.round(getUsagePercent(device.total))}%]`"></div>
                                 </div>
                                 <div class="flex justify-between mt-1 text-[10px] text-slate-400">
                                     <span>↓ {{ formatBytes(device.download) }}</span>
@@ -181,8 +173,7 @@
             <!-- Bottom Row: Category Usage & Device Types -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Usage by Category (Traffic) -->
-                <div
-                    class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm flex flex-col">
+                <div class="premium-card !p-6 shadow-sm flex flex-col">
                     <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-2">Traffic Volume by Category
                     </h3>
                     <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Total data consumed by device type</p>
@@ -218,7 +209,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import axios from 'axios'
+import api from '@/utils/api'
 import { getIcon } from '@/utils/icons'
 import {
     Router, Settings, Download, Upload, Users, Activity
@@ -245,7 +236,7 @@ const heatmapSeries = ref([])
 // Check Config
 const checkConfig = async () => {
     try {
-        const res = await axios.get('/api/v1/integrations/openwrt/config')
+        const res = await api.get('/integrations/openwrt/config')
         localConfigured.value = res.data && res.data.verified && res.data.enabled
     } catch (e) {
         localConfigured.value = false
@@ -260,7 +251,7 @@ const usageLoading = ref(false)
 const fetchUsageDetails = async () => {
     usageLoading.value = true
     try {
-        const res = await axios.get(`/api/v1/analytics/usage-details?range=${timeRange.value}&page=${usagePage.value}&limit=10`)
+        const res = await api.get(`/analytics/usage-details?range=${timeRange.value}&page=${usagePage.value}&limit=10`)
         usageDevices.value = res.data.items || []
         usageTotalPages.value = res.data.pages || 1
     } catch (e) {
@@ -288,11 +279,11 @@ const fetchData = async () => {
     try {
         // Parallel Fetch (Top Consumers Limit reduced to 5)
         const [trafficRes, topRes, distRes, catRes, heatRes] = await Promise.all([
-            axios.get(`/api/v1/analytics/traffic?range=${timeRange.value}`),
-            axios.get(`/api/v1/analytics/top-devices?range=${timeRange.value}&limit=5`),
-            axios.get(`/api/v1/analytics/distribution?range=${timeRange.value}`),
-            axios.get(`/api/v1/analytics/category-usage?range=${timeRange.value}`),
-            axios.get(`/api/v1/analytics/heatmap?range=${timeRange.value}`)
+            api.get(`/analytics/traffic?range=${timeRange.value}`),
+            api.get(`/analytics/top-devices?range=${timeRange.value}&limit=5`),
+            api.get(`/analytics/distribution?range=${timeRange.value}`),
+            api.get(`/analytics/category-usage?range=${timeRange.value}`),
+            api.get(`/analytics/heatmap?range=${timeRange.value}`)
         ])
 
         // Process Traffic

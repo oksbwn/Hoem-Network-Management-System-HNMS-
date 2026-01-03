@@ -18,8 +18,10 @@
 
         <!-- Tooltip -->
         <div v-if="hoverIndex !== -1"
-            class="absolute z-50 p-1.5 bg-slate-900/90 backdrop-blur text-white text-[9px] rounded shadow-lg pointer-events-none transition-opacity whitespace-nowrap border border-slate-700/50 flex flex-col gap-0.5"
-            :style="{ left: tooltipX + 'px', top: '50%', transform: 'translateY(-50%) ' + (tooltipX > width / 2 ? 'translateX(-105%)' : 'translateX(5%)') }">
+            class="hover-popover !opacity-100 !p-1.5 !bg-slate-900/90 !backdrop-blur !border-slate-700/50 !shadow-lg whitespace-nowrap flex flex-col gap-0.5 top-1/2 -translate-y-1/2"
+            :class="[
+                tooltipX > width / 2 ? '-translate-x-[105%]' : 'translate-x-[5%]'
+            ]" :style="{ left: `${tooltipX}px` }">
             <div class="flex items-center gap-1.5">
                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                 <span class="font-mono">{{ formatBytes(tooltipData.down) }}</span>

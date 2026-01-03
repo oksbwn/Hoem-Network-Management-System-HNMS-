@@ -1,35 +1,43 @@
 <template>
     <div class="space-y-6">
         <!-- Header -->
-        <div class="flex flex-col gap-4">
+        <div class="page-header">
             <div>
-                <h1 class="text-2xl font-bold text-slate-900 dark:text-white">System Logs</h1>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    View backend system events and errors. Found {{ total }} records.
+                <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">System Logs</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    View backend system events and monitoring. Found {{ total }} records.
                 </p>
             </div>
+            <div class="flex items-center gap-3">
+                <button @click="fetchLogs" class="btn-action" v-tooltip="'Refresh Logs'">
+                    <RefreshCw class="w-5 h-5" :class="{ 'animate-spin': loading }" />
+                </button>
+                <button @click.stop="promptClearLogs"
+                    class="btn-action hover:!text-red-500 hover:!bg-red-50 dark:hover:!bg-red-900/20"
+                    v-tooltip="'Clear All Logs'">
+                    <Trash2 class="w-5 h-5" />
+                </button>
+            </div>
+        </div>
 
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <!-- Search Input -->
-                <div class="relative w-full md:w-96">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <MagnifyingGlassIcon class="h-4 w-4 text-slate-400" />
-                    </div>
-                    <input v-model="search" @input="debounceSearch" type="text"
-                        class="block w-full h-10 rounded-xl border-0 py-2 pl-10 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 dark:bg-slate-800 dark:text-white dark:ring-slate-700 dark:placeholder:text-slate-500"
-                        placeholder="Search logs..." />
+        <!-- Filters & Search -->
+        <div class="glass-panel flex flex-col gap-4">
+            <div class="flex flex-col md:flex-row gap-4 items-center">
+                <div class="relative flex-1 w-full">
+                    <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input v-model="search" @input="debounceSearch" type="text" placeholder="Search logs..."
+                        class="input-base" />
                 </div>
-
-                <div class="flex items-center gap-3 flex-wrap">
-                    <!-- Level Filter Dropdown -->
-                    <div class="relative" v-click-outside="() => isLevelOpen = false">
+                <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                    <!-- Level Filter -->
+                    <div class="relative flex-1 md:w-44 group" v-click-outside="() => isLevelOpen = false">
                         <button @click="isLevelOpen = !isLevelOpen"
-                            class="flex items-center gap-2 px-3 h-10 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors whitespace-nowrap">
-                            <div class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                                <FunnelIcon class="h-4 w-4 text-slate-400" />
+                            class="w-full flex items-center justify-between pl-4 pr-3.5 py-2 bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-700/50 rounded-xl outline-none hover:ring-2 hover:ring-blue-500/10 transition-all text-sm font-medium text-slate-700 dark:text-slate-300">
+                            <div class="flex items-center gap-2.5">
+                                <Filter class="h-3.5 w-3.5" :class="levelFilter ? 'text-blue-500' : 'text-slate-400'" />
                                 <span>{{ levelFilter || 'All Levels' }}</span>
                             </div>
-                            <ChevronDownIcon class="h-4 w-4 text-slate-400 transition-transform duration-200"
+                            <ChevronDown class="h-4 w-4 text-slate-400 transition-transform duration-200"
                                 :class="{ 'rotate-180': isLevelOpen }" />
                         </button>
 
@@ -40,34 +48,31 @@
                             leave-from-class="transform scale-100 opacity-100"
                             leave-to-class="transform scale-95 opacity-0">
                             <div v-if="isLevelOpen"
-                                class="absolute top-full right-0 mt-2 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-30 overflow-hidden">
+                                class="absolute z-[60] mt-2 w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl py-1.5 overflow-hidden">
                                 <button @click="levelFilter = ''; isLevelOpen = false; fetchLogs()"
-                                    class="w-full px-4 py-2 text-sm text-left hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
-                                    :class="levelFilter === '' ? 'bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-slate-300'">
+                                    class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-left hover:bg-blue-600 hover:text-white transition-colors"
+                                    :class="levelFilter === '' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'">
                                     All Levels
-                                    <CheckIcon v-if="levelFilter === ''" class="h-3.5 w-3.5" />
                                 </button>
-                                <button v-for="lvl in ['INFO', 'WARNING', 'ERROR', 'CRITICAL', 'DEBUG']" :key="lvl"
+                                <button v-for="lvl in levels" :key="lvl"
                                     @click="levelFilter = lvl; isLevelOpen = false; fetchLogs()"
-                                    class="w-full px-4 py-2 text-sm text-left hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
-                                    :class="levelFilter === lvl ? 'bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-slate-300'">
+                                    class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-left hover:bg-blue-600 hover:text-white transition-colors"
+                                    :class="levelFilter === lvl ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'">
                                     {{ lvl }}
-                                    <CheckIcon v-if="levelFilter === lvl" class="h-3.5 w-3.5" />
                                 </button>
                             </div>
                         </transition>
                     </div>
 
-                    <!-- Custom Rows Dropdown -->
-                    <div class="relative" v-click-outside="() => isRowsOpen = false">
+                    <!-- Rows Limit Filter -->
+                    <div class="relative flex-1 md:w-32 group" v-click-outside="() => isRowsOpen = false">
                         <button @click="isRowsOpen = !isRowsOpen"
-                            class="flex items-center gap-2 pl-3 pr-2 h-10 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors whitespace-nowrap">
-                            <span
-                                class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Rows:</span>
-                            <span
-                                class="text-sm font-semibold text-slate-700 dark:text-slate-200 min-w-[1.5rem] text-left">{{
-                                    limit }}</span>
-                            <ChevronDownIcon class="h-4 w-4 text-slate-400 transition-transform duration-200"
+                            class="w-full flex items-center justify-between pl-4 pr-3.5 py-2 bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-700/50 rounded-xl outline-none hover:ring-2 hover:ring-blue-500/10 transition-all text-sm font-medium text-slate-700 dark:text-slate-300">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-[10px] uppercase font-bold text-slate-400">Rows</span>
+                                <span class="font-bold">{{ limit }}</span>
+                            </div>
+                            <ChevronDown class="h-4 w-4 text-slate-400 transition-transform duration-200"
                                 :class="{ 'rotate-180': isRowsOpen }" />
                         </button>
 
@@ -78,58 +83,44 @@
                             leave-from-class="transform scale-100 opacity-100"
                             leave-to-class="transform scale-95 opacity-0">
                             <div v-if="isRowsOpen"
-                                class="absolute top-full right-0 mt-2 w-32 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-30 overflow-hidden">
-                                <button v-for="opt in [15, 25, 50, 100, 500]" :key="opt"
-                                    @click="limit = opt; isRowsOpen = false; changePage(1)"
-                                    class="w-full px-4 py-2 text-sm text-left hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
-                                    :class="limit === opt ? 'bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-slate-300'">
+                                class="absolute z-[60] mt-2 w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl py-1.5 overflow-hidden">
+                                <button v-for="opt in [20, 50, 100, 200]" :key="opt"
+                                    @click="limit = opt; isRowsOpen = false; fetchLogs()"
+                                    class="w-full px-4 py-2 text-sm text-left hover:bg-blue-600 hover:text-white transition-colors"
+                                    :class="limit === opt ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-300'">
                                     {{ opt }}
-                                    <CheckIcon v-if="limit === opt" class="h-3.5 w-3.5" />
                                 </button>
                             </div>
                         </transition>
                     </div>
-
-                    <button @click="fetchLogs"
-                        class="p-2 h-10 w-10 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 shadow-sm"
-                        title="Refresh Logs">
-                        <ArrowPathIcon class="h-5 w-5" :class="{ 'animate-spin': loading }" />
-                    </button>
-
-                    <button @click="clearLogs"
-                        class="p-2 h-10 w-10 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors text-slate-400 dark:text-slate-500 shadow-sm"
-                        title="Clear All Logs">
-                        <TrashIcon class="w-5 h-5" />
-                    </button>
+                </div>
+            </div>
+            <!-- Display Info Line -->
+            <div
+                class="px-2 flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <div class="flex items-center gap-2">
+                    <Activity class="h-3.5 w-3.5 text-blue-500" />
+                    <span>Showing <b>{{ logs.length }}</b> of <b>{{ total }}</b> logs matching current filters</span>
                 </div>
             </div>
         </div>
 
         <!-- Logs Table -->
-        <div
-            class="bg-white dark:bg-slate-800 shadow sm:rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col min-h-[500px]">
-            <div class="flex-1 overflow-x-auto">
+        <div class="content-panel">
+            <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                     <thead class="bg-slate-50 dark:bg-slate-900/50">
                         <tr>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider w-48">
-                                Timestamp</th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider w-24">
-                                Level</th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider w-48">
-                                Module</th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                Message</th>
+                            <th scope="col" class="table-header-cell w-48">Timestamp</th>
+                            <th scope="col" class="table-header-cell w-24">Level</th>
+                            <th scope="col" class="table-header-cell w-48">Module</th>
+                            <th scope="col" class="table-header-cell">Message</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                         <tr v-if="loading && logs.length === 0">
                             <td colspan="4" class="px-6 py-20 text-center">
-                                <ArrowPathIcon class="h-8 w-8 mx-auto animate-spin mb-2 text-slate-400" />
+                                <RefreshCw class="h-8 w-8 mx-auto animate-spin mb-2 text-slate-400" />
                                 <p class="text-slate-500 dark:text-slate-400">Loading logs...</p>
                             </td>
                         </tr>
@@ -139,28 +130,25 @@
                                     criteria.</p>
                             </td>
                         </tr>
-                        <tr v-for="(log, idx) in logs" :key="idx"
-                            class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                            <td
-                                class="px-6 py-2 text-xs font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        <tr v-for="(log, idx) in logs" :key="idx" class="hover-row">
+                            <td class="table-data-cell font-mono text-xs opacity-70">
                                 {{ formatTime(log.timestamp) }}
                             </td>
-                            <td class="px-6 py-2 whitespace-nowrap">
+                            <td class="table-data-cell">
                                 <span :class="[
-                                    'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                                    'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider',
                                     levelColors[log.level] || 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
                                 ]">
                                     {{ log.level }}
                                 </span>
                             </td>
-                            <td class="px-6 py-2 text-xs text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap"
-                                :title="log.path">
+                            <td class="table-data-cell font-mono text-xs opacity-70" :title="log.path">
                                 {{ log.module }}:{{ log.line }}
                             </td>
-                            <td class="px-6 py-2 text-sm text-slate-900 dark:text-slate-100 break-all font-mono">
+                            <td class="table-data-cell font-mono text-sm break-all">
                                 {{ log.message }}
                                 <div v-if="log.exception"
-                                    class="mt-2 p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono overflow-x-auto">
+                                    class="mt-2 p-3 bg-red-50/50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-900/30 text-xs text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono overflow-x-auto">
                                     {{ log.exception }}
                                 </div>
                             </td>
@@ -171,27 +159,36 @@
 
             <!-- Pagination -->
             <div v-if="totalPages > 1"
-                class="flex justify-center items-center gap-2 p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30">
-                <button @click="changePage(page - 1)" :disabled="page <= 1"
-                    class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                class="flex justify-center items-center gap-2 p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
+                <button @click="changePage(page - 1)" :disabled="page <= 1" class="pagination-btn">
                     Previous
                 </button>
                 <div
                     class="px-4 py-2 bg-slate-900 dark:bg-white rounded-lg text-sm font-medium text-white dark:text-slate-900">
                     {{ page }} / {{ totalPages }}
                 </div>
-                <button @click="changePage(page + 1)" :disabled="page >= totalPages"
-                    class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                <button @click="changePage(page + 1)" :disabled="page >= totalPages" class="pagination-btn">
                     Next
                 </button>
             </div>
         </div>
     </div>
+
+    <ConfirmationModal :isOpen="showClearConfirm" title="Clear All Logs"
+        message="Are you sure you want to delete all system logs? This action cannot be undone and you will lose all historical event data."
+        confirmText="Yes, Clear Logs" type="danger" :loading="isClearing" @close="showClearConfirm = false"
+        @confirm="confirmClearLogs" />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { ArrowPathIcon, ChevronDownIcon, CheckIcon, MagnifyingGlassIcon, TrashIcon, FunnelIcon } from '@heroicons/vue/24/outline'
+import api from '@/utils/api'
+import * as LucideIcons from 'lucide-vue-next'
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
+const { RefreshCw, Search, Filter, ChevronDown, Activity, Trash2 } = LucideIcons
+import { useNotifications } from '@/composables/useNotifications'
+
+const { notifySuccess, notifyError } = useNotifications()
 
 interface LogRecord {
     timestamp: string
@@ -206,29 +203,19 @@ interface LogRecord {
 
 const logs = ref<LogRecord[]>([])
 const loading = ref(false)
-const limit = ref(15)
+const limit = ref(20)
 const page = ref(1)
 const total = ref(0)
 const totalPages = ref(1)
 const search = ref('')
-const levelFilter = ref('WARNING') // Default to WARNING
+const levelFilter = ref('WARNING')
 const isRowsOpen = ref(false)
 const isLevelOpen = ref(false)
+const levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
-// Custom directive
-const vClickOutside = {
-    mounted(el: any, binding: any) {
-        el._clickOutside = (event: Event) => {
-            if (!(el === event.target || el.contains(event.target))) {
-                binding.value(event)
-            }
-        }
-        document.addEventListener('click', el._clickOutside)
-    },
-    unmounted(el: any) {
-        document.removeEventListener('click', el._clickOutside)
-    }
-}
+// Confirmation Modal State
+const showClearConfirm = ref(false)
+const isClearing = ref(false)
 
 const levelColors: Record<string, string> = {
     'INFO': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
@@ -259,56 +246,53 @@ const changePage = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages.value) return
     page.value = newPage
     fetchLogs()
-    // Scroll to top of table
     window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const fetchLogs = async () => {
     loading.value = true
     try {
-        const queryParams = new URLSearchParams({
-            limit: limit.value.toString(),
-            page: page.value.toString(),
-            ...(search.value ? { search: search.value } : {}),
-            ...(levelFilter.value ? { level: levelFilter.value } : {})
+        const res = await api.get('/logs/', {
+            params: {
+                limit: limit.value,
+                page: page.value,
+                ...(search.value ? { search: search.value } : {}),
+                ...(levelFilter.value ? { level: levelFilter.value } : {})
+            }
         })
-
-        const res = await fetch(`/api/v1/logs/?${queryParams}`)
-        if (res.ok) {
-            const data = await res.json()
-            logs.value = data.items
-            total.value = data.total
-            totalPages.value = data.total_pages
-            page.value = data.page
-        } else {
-            console.error('Failed to fetch logs')
-        }
+        logs.value = res.data.items
+        total.value = res.data.total
+        totalPages.value = res.data.total_pages
+        page.value = res.data.page
     } catch (e) {
+        notifyError('Failed to fetch logs')
         console.error('Error fetching logs:', e)
     } finally {
         loading.value = false
     }
 }
 
-const clearLogs = async () => {
-    if (!confirm('Are you sure you want to clear all system logs? This action cannot be undone.')) return
+const promptClearLogs = () => {
+    showClearConfirm.value = true
+}
 
-    loading.value = true
+const confirmClearLogs = async () => {
+    isClearing.value = true
     try {
-        const res = await fetch('/api/v1/logs/', { method: 'DELETE' })
-        if (res.ok) {
-            logs.value = []
-            total.value = 0
-            totalPages.value = 1
-            page.value = 1
-        } else {
-            console.error('Failed to clear logs')
-        }
+        await api.delete('/logs/')
+        notifySuccess('All logs cleared successfully')
+        logs.value = []
+        total.value = 0
+        totalPages.value = 1
+        page.value = 1
+        showClearConfirm.value = false
+        // Refresh to ensure empty state
+        await fetchLogs()
     } catch (e) {
+        notifyError('Failed to clear logs')
         console.error('Error clearing logs:', e)
     } finally {
-        loading.value = false
-        fetchLogs()
+        isClearing.value = false
     }
 }
 
